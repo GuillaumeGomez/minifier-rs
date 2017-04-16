@@ -6,14 +6,14 @@ authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>"]
 
 description = "Minifier tool/lib for JS/CSS/HTML files"
 repository = "https://github.com/GuillaumeGomez/minifier-rs"
-documentation = ""
+documentation = "https://docs.rs/minifier-rs"
 readme = "README.md"
 keywords = ["minify", "minifier", "JS", "HTML", "CSS"]
 license = "MIT"
 
-[dependencies]
-
-[build-dependencies]
+[badges]
+appveyor = { repository = "GuillaumeGomez/minifier-rs", service = "github" }
+travis-ci = { repository = "GuillaumeGomez/minifier-rs" }
 
 [lib]
 name = "minifier"
