@@ -21,3 +21,4 @@ crate-type = ["dylib", "rlib"]
 
 [[bin]]
 name = "minifier"
+doc = false
