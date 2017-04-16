@@ -1,0 +1,23 @@
+[package]
+
+name = "minifier"
+version = "0.0.1"
+authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>"]
+
+description = "Minifier tool/lib for JS/CSS/HTML files"
+repository = "https://github.com/GuillaumeGomez/minifier-rs"
+documentation = ""
+readme = "README.md"
+keywords = ["minify", "minifier", "JS", "HTML", "CSS"]
+license = "MIT"
+
+[dependencies]
+
+[build-dependencies]
+
+[lib]
+name = "minifier"
+crate-type = ["dylib", "rlib"]
+
+[[bin]]
+name = "minifier"
