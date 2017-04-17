@@ -20,18 +20,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+extern crate minifier;
+
 use std::env;
 use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-mod js;
+use minifier::{html, js};
 
 fn print_help() {
     println!(r##"For now, this minifier supports the following type of files:
 
- - .js"##);
+ * .js
+ * .html
+ * .htm"##);
 }
 
 pub fn get_all_data(file_path: &str) -> io::Result<String> {
@@ -89,6 +93,7 @@ fn main() {
         }
         match p.extension().unwrap_or(OsStr::new("")).to_str().unwrap_or("") {
             "js" => call_minifier(arg, js::minify),
+            "html" | "htm" => call_minifier(arg, html::minify),
             x => println!("\"{}\": this format isn't supported", x),
         }
     }
