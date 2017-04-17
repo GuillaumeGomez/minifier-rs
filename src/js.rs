@@ -210,7 +210,7 @@ pub fn minify(source: &str) -> String {
 }
 
 #[test]
-fn minify_test() {
+fn js_minify_test() {
     let source = r##"
 var foo = "something";
 

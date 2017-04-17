@@ -1,19 +1,22 @@
 [package]
 
 name = "minifier"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>"]
 
 description = "Minifier tool/lib for JS/CSS/HTML files"
 repository = "https://github.com/GuillaumeGomez/minifier-rs"
 documentation = "https://docs.rs/minifier-rs"
 readme = "README.md"
-keywords = ["minify", "minifier", "JS", "HTML", "CSS"]
+keywords = ["minify", "minifier", "JS", "HTML"]
 license = "MIT"
 
 [badges]
 appveyor = { repository = "GuillaumeGomez/minifier-rs", service = "github" }
 travis-ci = { repository = "GuillaumeGomez/minifier-rs" }
+
+[dependencies]
+regex = "0.2"
 
 [lib]
 name = "minifier"
