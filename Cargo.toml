@@ -15,6 +15,9 @@ license = "MIT"
 appveyor = { repository = "GuillaumeGomez/minifier-rs", service = "github" }
 travis-ci = { repository = "GuillaumeGomez/minifier-rs" }
 
+[dependencies]
+regex = "0.2"
+
 [lib]
 name = "minifier"
 crate-type = ["dylib", "rlib"]

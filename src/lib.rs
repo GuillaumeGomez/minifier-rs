@@ -20,4 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+extern crate regex;
+
+pub mod html;
 pub mod js;
