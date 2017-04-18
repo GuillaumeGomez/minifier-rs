@@ -60,7 +60,13 @@ fn clean_unneeded_tags(source: &str) -> String {
 fn remove_comments(source: &str) -> String {
     // "build" and "endbuild" should be matched case insensitively.
     let re = Regex::new("<!--(.|\n)*?-->").unwrap();
-    re.replace_all(source, " ").into_owned()
+    re.replace_all(source, |caps: &Captures| {
+        if caps[0].replace("<!--", " ").trim().starts_with("[") {
+            caps[0].to_owned()
+        } else {
+            " ".to_owned()
+        }
+    }).into_owned()
 }
 
 fn unquote_attributes(source: &str) -> String {
@@ -180,5 +186,24 @@ lines -->
                            title</h2> <ul> <li>A list! <li>Who doesn't like lists? \
                            <li height=12 class=\"fooool\">Well, who cares... </ul> </div> \
                            </div> <script> console.log(\"foo\"); </script>";
+    assert_eq!(minify(source), expected_result);
+}
+
+#[test]
+fn html_keep_important_comments() {
+    let source = r#"
+<div>
+    <!-- normal comment -->
+    <div>content</div>
+    <!--[if lte IE 8]>
+    <div class="warning">This old browser is unsupported and will most likely display funky things.
+    </div>
+    <![endif]-->
+</div>
+"#;
+
+    let expected_result = "<div> <div>content</div> <!--[if lte IE 8]> <div class=\"warning\">This \
+                           old browser is unsupported and will most likely display funky things. \
+                           </div> <![endif]--> </div>";
     assert_eq!(minify(source), expected_result);
 }
