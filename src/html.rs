@@ -37,8 +37,9 @@ fn condense_whitespace(source: &str) -> String {
 
 fn condense(source: &str) -> String {
     let re = Regex::new(r"<(style|script)[\w|\s].*?>").unwrap();
+    let type_reg = Regex::new(r#"\s*?type="[\w|\s].*?""#).unwrap();
     re.replace_all(source, |caps: &Captures| {
-        format!("<{}>", &caps[1])
+        type_reg.replace_all(&caps[0], "").into_owned()
     }).into_owned()
 }
 
@@ -173,6 +174,8 @@ lines -->
     <script type="text/javascript"    >
         console.log("foo");
     </script>
+    <style type="text/css" src="../foo.css">
+    <script src="../foo.js">
 </body>
 "##;
 
@@ -185,7 +188,8 @@ lines -->
                            class=\"another_class\" width=100> <h2>A little sub \
                            title</h2> <ul> <li>A list! <li>Who doesn't like lists? \
                            <li height=12 class=\"fooool\">Well, who cares... </ul> </div> \
-                           </div> <script> console.log(\"foo\"); </script>";
+                           </div> <script > console.log(\"foo\"); </script> <style \
+                           src=\"../foo.css\"> <script src=\"../foo.js\">";
     assert_eq!(minify(source), expected_result);
 }
 
