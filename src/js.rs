@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017 Guillaume Gomez
+// Copyright (c) 2018 Guillaume Gomez
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,193 +20,400 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-fn remove_commented_lines(source: &str) -> String {
-    let mut res = String::new();
-    for line in source.lines() {
-        let strip_line = line.trim();
-        if strip_line.starts_with("//") && !strip_line.ends_with("*/") {
-            continue
+use std::convert::TryFrom;
+
+enum Elem<'a> {
+    Function(Function<'a>),
+    Block(Block<'a>),
+    Variable(Variable<'a>),
+    //Condition(Condition<'a>),
+    Loop(Loop<'a>),
+    Operation(Operation<'a>),
+    Comment(Comment<'a>),
+}
+
+enum ConditionType {
+    If,
+    ElseIf,
+    Else,
+    Ternary,
+}
+
+enum LoopType {
+    For,
+    While,
+}
+
+struct Block<'a> {
+    elems: Vec<Elem<'a>>,
+}
+
+struct Argument<'a> {
+    name: &'a str,
+}
+
+struct Function<'a> {
+    name: Option<&'a str>,
+    args: Vec<Argument<'a>>,
+    block: Block<'a>,
+}
+
+struct Variable<'a> {
+    name: &'a str,
+    value: Option<&'a str>,
+}
+
+/*struct Condition<'a> {
+    ty_: ConditionType,
+    condition: &'a str,
+    block: Block<'a>,
+}*/
+
+struct Loop<'a> {
+    ty_: LoopType,
+    condition: &'a str,
+    block: Block<'a>,
+}
+
+struct Operation<'a> {
+    content: &'a str,
+}
+
+struct Comment<'a> {
+    content: &'a str,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum ReservedChar {
+    Comma,
+    OpenParenthese,
+    CloseParenthese,
+    OpenCurlyBrace,
+    CloseCurlyBrace,
+    OpenBracket,
+    CloseBracket,
+    Colon,
+    SemiColon,
+    Dot,
+    Quote,
+    DoubleQuote,
+    ExclamationMark,
+    QuestionMark,
+    Slash,
+    Modulo,
+    Star,
+    Minus,
+    Plus,
+    EqualSign,
+    Backslash,
+    Space,
+    Tab,
+    Backline,
+    LessThan,
+    SuperiorThan,
+    Pipe,
+    Ampersand,
+}
+
+impl ReservedChar {
+    fn is_useless(&self) -> bool {
+        *self == ReservedChar::Space ||
+        *self == ReservedChar::Tab ||
+        *self == ReservedChar::Backline
+    }
+}
+
+impl TryFrom<char> for ReservedChar {
+    type Error = &'static str;
+
+    fn try_from(value: char) -> Result<ReservedChar, Self::Error> {
+        match value {
+            ','  => Ok(ReservedChar::Comma),
+            '('  => Ok(ReservedChar::OpenParenthese),
+            ')'  => Ok(ReservedChar::CloseParenthese),
+            '{'  => Ok(ReservedChar::OpenCurlyBrace),
+            '}'  => Ok(ReservedChar::CloseCurlyBrace),
+            '['  => Ok(ReservedChar::OpenBracket),
+            ']'  => Ok(ReservedChar::CloseBracket),
+            ':'  => Ok(ReservedChar::Colon),
+            ';'  => Ok(ReservedChar::SemiColon),
+            '.'  => Ok(ReservedChar::Dot),
+            '\'' => Ok(ReservedChar::Quote),
+            '"'  => Ok(ReservedChar::DoubleQuote),
+            '!'  => Ok(ReservedChar::ExclamationMark),
+            '?'  => Ok(ReservedChar::QuestionMark),
+            '/'  => Ok(ReservedChar::Slash),
+            '%'  => Ok(ReservedChar::Modulo),
+            '*'  => Ok(ReservedChar::Star),
+            '-'  => Ok(ReservedChar::Minus),
+            '+'  => Ok(ReservedChar::Plus),
+            '='  => Ok(ReservedChar::EqualSign),
+            '\\' => Ok(ReservedChar::Backslash),
+            ' '  => Ok(ReservedChar::Space),
+            '\t' => Ok(ReservedChar::Tab),
+            '\n' |
+            '\r' => Ok(ReservedChar::Backline),
+            '<'  => Ok(ReservedChar::LessThan),
+            '>'  => Ok(ReservedChar::SuperiorThan),
+            '|'  => Ok(ReservedChar::Pipe),
+            '&'  => Ok(ReservedChar::Ampersand),
+            _ => Err("Unknown reserved char"),
         }
-        res.push_str(line);
-    }
-    res
-}
-
-fn get_next(source: &[char], pos: &mut usize) -> Option<char> {
-    if *pos < source.len() {
-        *pos += 1;
-        Some(source[*pos - 1] as char)
-    } else {
-        None
     }
 }
 
-fn is_in(c: char, s: &str) -> bool {
-    s.find(c).is_some()
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum Keyword {
+    Break,
+    Case,
+    Catch,
+    Const,
+    Continue,
+    Default,
+    Do,
+    Else,
+    False,
+    Finally,
+    Function,
+    For,
+    If,
+    In,
+    InstanceOf,
+    New,
+    Null,
+    Private,
+    Protected,
+    Public,
+    Return,
+    Switch,
+    This,
+    Throw,
+    True,
+    Try,
+    Typeof,
+    Static,
+    Var,
+    While,
 }
 
-fn global_minify(source: &str) -> String {
-    if source.len() < 3 {
-        return source.to_owned();
-    }
-    let source: Vec<char> = source.chars().collect();
-    let mut output = String::new();
-    let space_strings = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$\\";
-    let starters = "{[(+-";
-    let enders = "}])+-\"'";
-    let newlinestart_strings = format!("{}{}", starters, space_strings);
-    let newlineend_strings = format!("{}{}", enders, space_strings);
-    let mut do_newline = false;
-    let mut do_space = false;
-    let mut doing_single_comment = false;
-    let mut doing_multi_comment = false;
-    let mut previous_before_comment = '\0';
-    let mut in_quote = '\0';
-    let mut in_re = false;
-    let mut quote_buf = Vec::new();
-    let mut previous = source[0];
-    let mut next1 = source[1];
-    let mut previous_non_space = None;
+impl<'a> TryFrom<&'a str> for Keyword {
+    type Error = &'static str;
 
-    if previous == '/' {
-        if next1 == '/' {
-            doing_single_comment = true;
-        } else if next1 == '*' {
-            doing_multi_comment = true;
+    fn try_from(value: &str) -> Result<Keyword, Self::Error> {
+        match value {
+            "break" => Ok(Keyword::Break),
+            "case" => Ok(Keyword::Case),
+            "catch" => Ok(Keyword::Catch),
+            "const" => Ok(Keyword::Const),
+            "continue" => Ok(Keyword::Continue),
+            "default" => Ok(Keyword::Default),
+            "do" => Ok(Keyword::Do),
+            "else" => Ok(Keyword::Else),
+            "false" => Ok(Keyword::False),
+            "finally" => Ok(Keyword::Finally),
+            "function" => Ok(Keyword::Function),
+            "for" => Ok(Keyword::For),
+            "if" => Ok(Keyword::If),
+            "in" => Ok(Keyword::In),
+            "instanceof" => Ok(Keyword::InstanceOf),
+            "new" => Ok(Keyword::New),
+            "null" => Ok(Keyword::Null),
+            "private" => Ok(Keyword::Private),
+            "protected" => Ok(Keyword::Protected),
+            "public" => Ok(Keyword::Public),
+            "return" => Ok(Keyword::Return),
+            "switch" => Ok(Keyword::Switch),
+            "this" => Ok(Keyword::This),
+            "throw" => Ok(Keyword::Throw),
+            "true" => Ok(Keyword::True),
+            "try" => Ok(Keyword::Try),
+            "typeof" => Ok(Keyword::Typeof),
+            "static" => Ok(Keyword::Static),
+            "var" => Ok(Keyword::Var),
+            "while" => Ok(Keyword::While),
+            _ => Err("Unkown keyword"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum Condition {
+    And,
+    Or,
+    DifferentThan,
+    SuperDifferentThan,
+    EqualTo,
+    SuperEqualTo,
+}
+
+#[derive(Debug, PartialEq)]
+enum Token<'a> {
+    Keyword(Keyword),
+    Char(ReservedChar),
+    String(&'a str),
+    Comment(&'a str),
+    Other(&'a str),
+    Condition(Condition),
+}
+
+impl<'a> Token<'a> {
+    fn is_comment(&self) -> bool {
+        match *self {
+            Token::Comment(_) => true,
+            _ => false,
+        }
+    }
+
+    fn get_char(&self) -> Option<ReservedChar> {
+        match *self {
+            Token::Char(c) => Some(c),
+            _ => None,
+        }
+    }
+}
+
+use std::str::Chars;
+use std::iter::Enumerate;
+
+fn get_line_comment<'a>(source: &'a str, iterator: &mut Enumerate<Chars>,
+                        start_pos: &mut usize) -> Option<Token<'a>> {
+    *start_pos += 1;
+    while let Some((pos, c)) = iterator.next() {
+        if let Ok(c) = ReservedChar::try_from(c) {
+            if c == ReservedChar::Backline {
+                let ret = Some(Token::Comment(&source[*start_pos..pos]));
+                *start_pos = pos;
+                return ret;
+            }
+        }
+    }
+    None
+}
+
+fn get_comment<'a>(source: &'a str, iterator: &mut Enumerate<Chars>,
+                   start_pos: &mut usize) -> Option<Token<'a>> {
+    let mut prev = ReservedChar::Quote;
+
+    *start_pos += 1;
+    while let Some((pos, c)) = iterator.next() {
+        if let Ok(c) = ReservedChar::try_from(c) {
+            if c == ReservedChar::Slash && prev == ReservedChar::Star {
+                let ret = Some(Token::Comment(&source[*start_pos..pos - 1]));
+                *start_pos = pos;
+                return ret;
+            }
+            prev = c;
         } else {
-            output.push(previous);
+            prev = ReservedChar::Space;
         }
-    } else if previous >= '!' {
-        if is_in(previous, "\'\"") {
-            in_quote = previous;
-        }
-        output.push(previous);
-        previous_non_space = Some(previous);
-    } else {
-        previous_non_space = Some(' ');
     }
-    let mut next2;
-    let mut pos = 2;
+    None
+}
+
+fn get_string<'a>(source: &'a str, iterator: &mut Enumerate<Chars>, start_pos: &mut usize,
+                  start: ReservedChar) -> Option<Token<'a>> {
+    let mut prev = ReservedChar::Quote;
+
+    *start_pos += 1;
+    while let Some((pos, c)) = iterator.next() {
+        if let Ok(c) = ReservedChar::try_from(c) {
+            if c == start && prev != ReservedChar::Backslash {
+                let ret = Some(Token::String(&source[*start_pos..pos]));
+                *start_pos = pos;
+                return ret;
+            }
+            prev = c;
+        } else {
+            prev = ReservedChar::Space;
+        }
+    }
+    None
+}
+
+fn tokenize<'a>(source: &'a str) -> Vec<Token<'a>> {
+    let mut v = Vec::with_capacity(1000);
+    let mut start = 0;
+    let mut iterator = source.chars().enumerate();
+
     loop {
-        next2 = get_next(&source, &mut pos);
-        if next2.is_none() {
-            break
-        }
-        if doing_multi_comment {
-            if next1 == '*' && next2 == Some('/') {
-                doing_multi_comment = false;
-                next2 = get_next(&source, &mut pos);
-            }
-        } else if doing_single_comment {
-            if is_in(next1, "\r\n") {
-                doing_single_comment = false;
-                while next2 == Some('\r') || next2 == Some('\n') {
-                    next2 = get_next(&source, &mut pos);
-                    if next2.is_none() {
-                        break
-                    }
-                }
-                if is_in(previous_before_comment, ")}]") {
-                    do_newline = true;
-                } else if is_in(previous_before_comment, space_strings) {
-                    output.push('\n')
+        let (mut pos, c) = match iterator.next() {
+            Some(x) => x,
+            None => break,
+        };
+        if let Ok(c) = ReservedChar::try_from(c) {
+            if pos > start {
+                if let Ok(w) = Keyword::try_from(&source[start..pos]) {
+                    v.push(Token::Keyword(w));
+                } else {
+                    v.push(Token::Other(&source[start..pos]));
                 }
             }
-        } else if in_quote != '\0' {
-            quote_buf.push(next1);
-
-            if next1 == in_quote {
-                let mut numslashes = 0;
-                let max = quote_buf.len() - 1;
-                for c in (&quote_buf[..max]).iter().rev() {
-                    if *c != '\\' {
-                        break
-                    } else {
-                        numslashes += 1;
-                    }
+            if c == ReservedChar::Quote || c == ReservedChar::DoubleQuote {
+                if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
+                    v.push(s);
                 }
-                if numslashes & 1 == 0 {
-                    in_quote = '\0';
-                    for i in &quote_buf {
-                        output.push(*i);
-                    }
+            } else if c == ReservedChar::Slash &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::Slash) {
+                v.pop();
+                if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
+                    v.push(s);
                 }
-            }
-        } else if is_in(next1, "\r\n") {
-            let previous_non_space = previous_non_space.unwrap_or('\0');
-            if is_in(previous_non_space, &newlineend_strings) || previous_non_space > '~' {
-                loop {
-                    if next2.unwrap_or('\0') < '!' {
-                        next2 = get_next(&source, &mut pos);
-                        if next2.is_none() {
-                            break
-                        }
-                    } else {
-                        let next2 = next2.unwrap_or('\0');
-                        if is_in(next2, &newlinestart_strings) || next2 > '~' || next2 == '/' {
-                            do_newline = true;
-                        }
-                        break
-                    }
+            } else if c == ReservedChar::Star &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::Slash) {
+                v.pop();
+                if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
+                    v.push(s);
                 }
-            }
-        } else if next1 < '!' && !in_re {
-            let next2 = next2.unwrap_or('\0');
-            let previous_non_space = previous_non_space.unwrap_or('\0');
-            if (is_in(previous_non_space, space_strings) || previous_non_space > '~') &&
-               (is_in(next2, space_strings) || next2 > '~') {
-                do_space = true;
-            }
-        } else if next1 == '/' {
-            let next2 = next2.unwrap_or('\0');
-            let previous_non_space = previous_non_space.unwrap_or('\0');
-            if in_re {
-                if previous != '\\' {
-                    in_re = false;
-                }
-                output.push('/');
-            } else if next2 == '/' {
-                doing_single_comment = true;
-                previous_before_comment = previous_non_space;
-            } else if next2 == '*' {
-                doing_multi_comment = true;
+            } else if c == ReservedChar::Pipe &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::Pipe) {
+                v.pop();
+                v.push(Token::Condition(Condition::Or));
+            } else if c == ReservedChar::Ampersand &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::Ampersand) {
+                v.pop();
+                v.push(Token::Condition(Condition::And));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::EqualSign) {
+                v.pop();
+                v.push(Token::Condition(Condition::EqualTo));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Condition(Condition::EqualTo) {
+                v.pop();
+                v.push(Token::Condition(Condition::SuperEqualTo));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::ExclamationMark) {
+                v.pop();
+                v.push(Token::Condition(Condition::DifferentThan));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Condition(Condition::DifferentThan) {
+                v.pop();
+                v.push(Token::Condition(Condition::SuperDifferentThan));
             } else {
-                in_re = is_in(previous_non_space, "(,=:[?!&|");
-                output.push('/');
+                v.push(Token::Char(c));
             }
-        } else {
-            if do_space {
-                do_space = false;
-                output.push(' ');
-            }
-            if do_newline {
-                output.push('\n');
-                do_newline = false;
-            }
-            output.push(next1);
-            if !in_re && is_in(next1, "'\"") {
-                in_quote = next1;
-                quote_buf = Vec::new();
-            }
-        }
-        previous = next1;
-        next1 = next2.unwrap_or('\0');
-        if previous >= '!' {
-            previous_non_space = Some(previous);
+            start = pos + 1;
         }
     }
-    let last = next1;
-    let last = format!("{}", last).trim().to_owned();
-    if !(doing_single_comment || doing_multi_comment) && last != "" && last != "/" {
-        output.push_str(&last);
-    }
-    output
+    v
 }
 
-/// Returns a minified version of the provided JS source.
+fn clean_tokens<'a>(tokens: &mut Vec<Token<'a>>) {
+    tokens.retain(|c| {
+        !c.is_comment() && {
+            if let Some(x) = c.get_char() {
+                !x.is_useless()
+            } else {
+                true
+            }
+        }
+    })
+}
+
 pub fn minify(source: &str) -> String {
-    let source = remove_commented_lines(source);
-    global_minify(&source).trim().to_owned()
+    let mut v = tokenize(source);
+    clean_tokens(&mut v);
+    println!("{:?}", v);
+    String::new()
 }
 
 #[test]
