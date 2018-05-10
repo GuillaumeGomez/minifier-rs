@@ -20,10 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use std::convert::TryFrom;
 use std::fmt;
 use std::iter::Enumerate;
 use std::str::Chars;
+
+pub trait MyTryFrom<T>: Sized {
+    type Error;
+    fn try_from(value: T) -> Result<Self, Self::Error>;
+}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ReservedChar {
@@ -101,7 +105,7 @@ impl fmt::Display for ReservedChar {
     }
 }
 
-impl TryFrom<char> for ReservedChar {
+impl MyTryFrom<char> for ReservedChar {
     type Error = &'static str;
 
     fn try_from(value: char) -> Result<ReservedChar, Self::Error> {
@@ -221,7 +225,7 @@ impl fmt::Display for Keyword {
     }
 }
 
-impl<'a> TryFrom<&'a str> for Keyword {
+impl<'a> MyTryFrom<&'a str> for Keyword {
     type Error = &'static str;
 
     fn try_from(value: &str) -> Result<Keyword, Self::Error> {
@@ -327,7 +331,7 @@ impl fmt::Display for Operation {
     }
 }
 
-impl TryFrom<ReservedChar> for Operation {
+impl MyTryFrom<ReservedChar> for Operation {
     type Error = &'static str;
 
     fn try_from(value: ReservedChar) -> Result<Operation, Self::Error> {
@@ -448,7 +452,7 @@ fn get_string<'a>(source: &'a str, iterator: &mut Enumerate<Chars>, start_pos: &
     while let Some((pos, c)) = iterator.next() {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == start && prev != ReservedChar::Backslash {
-                let ret = Some(Token::String(&source[*start_pos..=pos]));
+                let ret = Some(Token::String(&source[*start_pos..pos + 1]));
                 *start_pos = pos;
                 return ret;
             }
