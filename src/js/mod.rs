@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2017 Guillaume Gomez
+// Copyright (c) 2018 Guillaume Gomez
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,9 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#![feature(try_from)]
-
-extern crate regex;
-
-pub mod html;
+pub mod token;
 pub mod js;
+
+pub use self::js::minify;

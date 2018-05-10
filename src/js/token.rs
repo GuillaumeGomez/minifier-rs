@@ -21,70 +21,12 @@
 // SOFTWARE.
 
 use std::convert::TryFrom;
-
-enum Elem<'a> {
-    Function(Function<'a>),
-    Block(Block<'a>),
-    Variable(Variable<'a>),
-    //Condition(Condition<'a>),
-    Loop(Loop<'a>),
-    Operation(Operation<'a>),
-    Comment(Comment<'a>),
-}
-
-enum ConditionType {
-    If,
-    ElseIf,
-    Else,
-    Ternary,
-}
-
-enum LoopType {
-    For,
-    While,
-}
-
-struct Block<'a> {
-    elems: Vec<Elem<'a>>,
-}
-
-struct Argument<'a> {
-    name: &'a str,
-}
-
-struct Function<'a> {
-    name: Option<&'a str>,
-    args: Vec<Argument<'a>>,
-    block: Block<'a>,
-}
-
-struct Variable<'a> {
-    name: &'a str,
-    value: Option<&'a str>,
-}
-
-/*struct Condition<'a> {
-    ty_: ConditionType,
-    condition: &'a str,
-    block: Block<'a>,
-}*/
-
-struct Loop<'a> {
-    ty_: LoopType,
-    condition: &'a str,
-    block: Block<'a>,
-}
-
-struct Operation<'a> {
-    content: &'a str,
-}
-
-struct Comment<'a> {
-    content: &'a str,
-}
+use std::fmt;
+use std::iter::Enumerate;
+use std::str::Chars;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum ReservedChar {
+pub enum ReservedChar {
     Comma,
     OpenParenthese,
     CloseParenthese,
@@ -123,6 +65,42 @@ impl ReservedChar {
     }
 }
 
+impl fmt::Display for ReservedChar {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}",
+               match *self {
+                   ReservedChar::Comma           => ',',
+                   ReservedChar::OpenParenthese  => '(',
+                   ReservedChar::CloseParenthese => ')',
+                   ReservedChar::OpenCurlyBrace  => '{',
+                   ReservedChar::CloseCurlyBrace => '}',
+                   ReservedChar::OpenBracket     => '[',
+                   ReservedChar::CloseBracket    => ']',
+                   ReservedChar::Colon           => ':',
+                   ReservedChar::SemiColon       => ';',
+                   ReservedChar::Dot             => '.',
+                   ReservedChar::Quote           => '\'',
+                   ReservedChar::DoubleQuote     => '"',
+                   ReservedChar::ExclamationMark => '!',
+                   ReservedChar::QuestionMark    => '?',
+                   ReservedChar::Slash           => '/',
+                   ReservedChar::Modulo          => '%',
+                   ReservedChar::Star            => '*',
+                   ReservedChar::Minus           => '-',
+                   ReservedChar::Plus            => '+',
+                   ReservedChar::EqualSign       => '=',
+                   ReservedChar::Backslash       => '\\',
+                   ReservedChar::Space           => ' ',
+                   ReservedChar::Tab             => '\t',
+                   ReservedChar::Backline        => '\n',
+                   ReservedChar::LessThan        => '<',
+                   ReservedChar::SuperiorThan    => '>',
+                   ReservedChar::Pipe            => '|',
+                   ReservedChar::Ampersand       => '&',
+               })
+    }
+}
+
 impl TryFrom<char> for ReservedChar {
     type Error = &'static str;
 
@@ -157,13 +135,13 @@ impl TryFrom<char> for ReservedChar {
             '>'  => Ok(ReservedChar::SuperiorThan),
             '|'  => Ok(ReservedChar::Pipe),
             '&'  => Ok(ReservedChar::Ampersand),
-            _ => Err("Unknown reserved char"),
+            _    => Err("Unknown reserved char"),
         }
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum Keyword {
+pub enum Keyword {
     Break,
     Case,
     Catch,
@@ -194,6 +172,53 @@ enum Keyword {
     Static,
     Var,
     While,
+}
+
+impl Keyword {
+    pub fn get_required<'a>(&self, next: &Token<'a>) -> Option<char> {
+        match *next {
+            Token::Keyword(_) | Token::String(_) | Token::Other(_) => Some(' '),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for Keyword {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}",
+               match *self {
+                   Keyword::Break => "break",
+                   Keyword::Case => "case",
+                   Keyword::Catch => "catch",
+                   Keyword::Const => "const",
+                   Keyword::Continue => "continue",
+                   Keyword::Default => "default",
+                   Keyword::Do => "do",
+                   Keyword::Else => "else",
+                   Keyword::False => "false",
+                   Keyword::Finally => "finally",
+                   Keyword::Function => "function",
+                   Keyword::For => "for",
+                   Keyword::If => "if",
+                   Keyword::In => "in",
+                   Keyword::InstanceOf => "instanceof",
+                   Keyword::New => "new",
+                   Keyword::Null => "null",
+                   Keyword::Private => "private",
+                   Keyword::Protected => "protected",
+                   Keyword::Public => "public",
+                   Keyword::Return => "return",
+                   Keyword::Switch => "switch",
+                   Keyword::This => "this",
+                   Keyword::Throw => "throw",
+                   Keyword::True => "true",
+                   Keyword::Try => "try",
+                   Keyword::Typeof => "typeof",
+                   Keyword::Static => "static",
+                   Keyword::Var => "var",
+                   Keyword::While => "while",
+               })
+    }
 }
 
 impl<'a> TryFrom<&'a str> for Keyword {
@@ -237,23 +262,111 @@ impl<'a> TryFrom<&'a str> for Keyword {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum Condition {
+pub enum Condition {
     And,
     Or,
     DifferentThan,
     SuperDifferentThan,
     EqualTo,
     SuperEqualTo,
+    SuperiorThan,
+    SuperiorOrEqualTo,
+    InferiorThan,
+    InferiorOrEqualTo,
+}
+
+impl fmt::Display for Condition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}",
+               match *self {
+                   Condition::And => "&&",
+                   Condition::Or => "||",
+                   Condition::DifferentThan => "!=",
+                   Condition::SuperDifferentThan => "!==",
+                   Condition::EqualTo => "==",
+                   Condition::SuperEqualTo => "===",
+                   Condition::SuperiorThan => ">",
+                   Condition::SuperiorOrEqualTo => ">=",
+                   Condition::InferiorThan => "<",
+                   Condition::InferiorOrEqualTo => "<=",
+               })
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Operation {
+    Addition,
+    AdditionEqual,
+    Subtract,
+    SubtractEqual,
+    Multiply,
+    MultiplyEqual,
+    Divide,
+    DivideEqual,
+    Modulo,
+    ModuloEqual,
+    Equal,
+}
+
+impl fmt::Display for Operation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}",
+               match *self {
+                   Operation::Addition => "+",
+                   Operation::AdditionEqual => "+=",
+                   Operation::Subtract => "-",
+                   Operation::SubtractEqual => "-=",
+                   Operation::Multiply => "*",
+                   Operation::MultiplyEqual => "*=",
+                   Operation::Divide => "/",
+                   Operation::DivideEqual => "/=",
+                   Operation::Modulo => "%",
+                   Operation::ModuloEqual => "%=",
+                   Operation::Equal => "=",
+               })
+    }
+}
+
+impl TryFrom<ReservedChar> for Operation {
+    type Error = &'static str;
+
+    fn try_from(value: ReservedChar) -> Result<Operation, Self::Error> {
+        Ok(match value {
+            ReservedChar::Plus => Operation::Addition,
+            ReservedChar::Minus => Operation::Subtract,
+            ReservedChar::Slash => Operation::Divide,
+            ReservedChar::Star => Operation::Multiply,
+            ReservedChar::Modulo => Operation::Modulo,
+            _ => return Err("Unkown operation"),
+        })
+    }
 }
 
 #[derive(Debug, PartialEq)]
-enum Token<'a> {
+pub enum Token<'a> {
     Keyword(Keyword),
     Char(ReservedChar),
     String(&'a str),
     Comment(&'a str),
+    License(&'a str),
     Other(&'a str),
     Condition(Condition),
+    Operation(Operation),
+}
+
+impl<'a> fmt::Display for Token<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Token::Keyword(x) => write!(f, "{}", x),
+            Token::Char(x) => write!(f, "{}", x),
+            Token::String(x) |
+            Token::Comment(x) |
+            Token::Other(x) => write!(f, "{}", x),
+            Token::License(x) => write!(f, "/*!{}*/", x),
+            Token::Condition(x) => write!(f, "{}", x),
+            Token::Operation(x) => write!(f, "{}", x),
+        }
+    }
 }
 
 impl<'a> Token<'a> {
@@ -270,10 +383,15 @@ impl<'a> Token<'a> {
             _ => None,
         }
     }
-}
 
-use std::str::Chars;
-use std::iter::Enumerate;
+    #[allow(dead_code)]
+    fn is_condition(&self) -> bool {
+        match *self {
+            Token::Condition(_) => true,
+            _ => false,
+        }
+    }
+}
 
 fn get_line_comment<'a>(source: &'a str, iterator: &mut Enumerate<Chars>,
                         start_pos: &mut usize) -> Option<Token<'a>> {
@@ -293,12 +411,25 @@ fn get_line_comment<'a>(source: &'a str, iterator: &mut Enumerate<Chars>,
 fn get_comment<'a>(source: &'a str, iterator: &mut Enumerate<Chars>,
                    start_pos: &mut usize) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
-
     *start_pos += 1;
+    let builder = if let Some((_, c)) = iterator.next() {
+        if c == '!' {
+            *start_pos += 1;
+            Token::License
+        } else {
+            if let Ok(c) = ReservedChar::try_from(c) {
+                prev = c;
+            }
+            Token::Comment
+        }
+    } else {
+        Token::Comment
+    };
+
     while let Some((pos, c)) = iterator.next() {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Slash && prev == ReservedChar::Star {
-                let ret = Some(Token::Comment(&source[*start_pos..pos - 1]));
+                let ret = Some(builder(&source[*start_pos..pos - 1]));
                 *start_pos = pos;
                 return ret;
             }
@@ -314,11 +445,10 @@ fn get_string<'a>(source: &'a str, iterator: &mut Enumerate<Chars>, start_pos: &
                   start: ReservedChar) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
 
-    *start_pos += 1;
     while let Some((pos, c)) = iterator.next() {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == start && prev != ReservedChar::Backslash {
-                let ret = Some(Token::String(&source[*start_pos..pos]));
+                let ret = Some(Token::String(&source[*start_pos..=pos]));
                 *start_pos = pos;
                 return ret;
             }
@@ -330,7 +460,7 @@ fn get_string<'a>(source: &'a str, iterator: &mut Enumerate<Chars>, start_pos: &
     None
 }
 
-fn tokenize<'a>(source: &'a str) -> Vec<Token<'a>> {
+pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
     let mut v = Vec::with_capacity(1000);
     let mut start = 0;
     let mut iterator = source.chars().enumerate();
@@ -353,13 +483,13 @@ fn tokenize<'a>(source: &'a str) -> Vec<Token<'a>> {
                     v.push(s);
                 }
             } else if c == ReservedChar::Slash &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::Slash) {
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Divide) {
                 v.pop();
                 if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
                     v.push(s);
                 }
             } else if c == ReservedChar::Star &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::Slash) {
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Divide) {
                 v.pop();
                 if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
                     v.push(s);
@@ -388,17 +518,57 @@ fn tokenize<'a>(source: &'a str) -> Vec<Token<'a>> {
                       *v.last().unwrap_or(&Token::Other("")) == Token::Condition(Condition::DifferentThan) {
                 v.pop();
                 v.push(Token::Condition(Condition::SuperDifferentThan));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Divide) {
+                v.pop();
+                v.push(Token::Operation(Operation::DivideEqual));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Multiply) {
+                v.pop();
+                v.push(Token::Operation(Operation::MultiplyEqual));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Addition) {
+                v.pop();
+                v.push(Token::Operation(Operation::AdditionEqual));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Subtract) {
+                v.pop();
+                v.push(Token::Operation(Operation::SubtractEqual));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Modulo) {
+                v.pop();
+                v.push(Token::Operation(Operation::ModuloEqual));
+            } else if let Ok(o) = Operation::try_from(c) {
+                v.push(Token::Operation(o));
             } else {
                 v.push(Token::Char(c));
             }
             start = pos + 1;
         }
     }
-    v
+    Tokens(v)
 }
 
-fn clean_tokens<'a>(tokens: &mut Vec<Token<'a>>) {
-    tokens.retain(|c| {
+pub struct Tokens<'a>(pub Vec<Token<'a>>);
+
+impl<'a> fmt::Display for Tokens<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let tokens = &self.0;
+        for i in 0..tokens.len() {
+            write!(f, "{}", tokens[i])?;
+            if let Some(c) = match tokens[i] {
+                Token::Keyword(x) if i + 1 < tokens.len() => x.get_required(&tokens[i + 1]),
+                _ => None,
+            } {
+                write!(f, "{}", c)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+pub fn clean_tokens<'a>(tokens: &mut Tokens<'a>) {
+    tokens.0.retain(|c| {
         !c.is_comment() && {
             if let Some(x) = c.get_char() {
                 !x.is_useless()
@@ -406,48 +576,5 @@ fn clean_tokens<'a>(tokens: &mut Vec<Token<'a>>) {
                 true
             }
         }
-    })
-}
-
-pub fn minify(source: &str) -> String {
-    let mut v = tokenize(source);
-    clean_tokens(&mut v);
-    println!("{:?}", v);
-    String::new()
-}
-
-#[test]
-fn js_minify_test() {
-    let source = r##"
-var foo = "something";
-
-var another_var = 2348323;
-
-// who doesn't like comments?
-/* and even longer comments?
-
-like
-on
-a
-lot
-of
-lines!
-
-Fun!
-*/
-function far_away(x, y) {
-    var x2 = x + 4;
-    return x * x2 + y;
-}
-
-// this call is useless
-far_away(another_var, 12);
-// this call is useless too
-far_away(another_var, 12);
-"##;
-
-    let expected_result = "var foo=\"something\";var another_var=2348323;function far_away(x,y){\
-                           var x2=x+4;return x*x2+y;}far_away(another_var,12);far_away(another_var,\
-                           12);";
-    assert_eq!(minify(source), expected_result);
+    });
 }
