@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 use std::fmt;
+use std::iter::Peekable;
 use std::str::CharIndices;
 
 pub trait MyTryFrom<T>: Sized {
@@ -353,6 +354,11 @@ pub enum Token<'a> {
     Comment(&'a str),
     License(&'a str),
     Other(&'a str),
+    Regex {
+        regex: &'a str,
+        is_global: bool,
+        is_interactive: bool,
+    },
     Condition(Condition),
     Operation(Operation),
 }
@@ -366,6 +372,16 @@ impl<'a> fmt::Display for Token<'a> {
             Token::Comment(x) |
             Token::Other(x) => write!(f, "{}", x),
             Token::License(x) => write!(f, "/*!{}*/", x),
+            Token::Regex { regex, is_global, is_interactive } => {
+                let x = write!(f, "/{}/", regex);
+                if is_global {
+                    write!(f, "g")?;
+                }
+                if is_interactive {
+                    write!(f, "i")?;
+                }
+                x
+            }
             Token::Condition(x) => write!(f, "{}", x),
             Token::Operation(x) => write!(f, "{}", x),
         }
@@ -394,9 +410,23 @@ impl<'a> Token<'a> {
             _ => false,
         }
     }
+
+    fn is_other(&self) -> bool {
+        match *self {
+            Token::Other(_) => true,
+            _ => false,
+        }
+    }
+
+    fn is_white_character(&self) -> bool {
+        match *self {
+            Token::Char(c) => c.is_useless(),
+            _ => false,
+        }
+    }
 }
 
-fn get_line_comment<'a>(source: &'a str, iterator: &mut CharIndices,
+fn get_line_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                         start_pos: &mut usize) -> Option<Token<'a>> {
     *start_pos += 1;
     while let Some((pos, c)) = iterator.next() {
@@ -411,7 +441,38 @@ fn get_line_comment<'a>(source: &'a str, iterator: &mut CharIndices,
     None
 }
 
-fn get_comment<'a>(source: &'a str, iterator: &mut CharIndices,
+fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
+                 start_pos: &mut usize) -> Option<Token<'a>> {
+    *start_pos += 1;
+    while let Some((pos, c)) = iterator.next() {
+        if let Ok(c) = ReservedChar::try_from(c) {
+            if c == ReservedChar::Slash {
+                let mut is_global = false;
+                let mut is_interactive = false;
+                let mut add = 0;
+                loop {
+                    match iterator.peek() {
+                        Some((_, 'i')) => is_interactive = true,
+                        Some((_, 'g')) => is_global = true,
+                        _ => break,
+                    };
+                    iterator.next();
+                    add += 1;
+                }
+                let ret = Some(Token::Regex {
+                                   regex: &source[*start_pos..pos],
+                                   is_interactive,
+                                   is_global
+                               });
+                *start_pos = pos + add;
+                return ret;
+            }
+        }
+    }
+    None
+}
+
+fn get_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                    start_pos: &mut usize) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
     *start_pos += 1;
@@ -444,7 +505,7 @@ fn get_comment<'a>(source: &'a str, iterator: &mut CharIndices,
     None
 }
 
-fn get_string<'a>(source: &'a str, iterator: &mut CharIndices, start_pos: &mut usize,
+fn get_string<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>, start_pos: &mut usize,
                   start: ReservedChar) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
 
@@ -463,10 +524,20 @@ fn get_string<'a>(source: &'a str, iterator: &mut CharIndices, start_pos: &mut u
     None
 }
 
+fn first_useful<'a>(v: &'a [Token<'a>]) -> Option<&'a Token<'a>> {
+    for x in v.iter().rev() {
+        if x.is_white_character() {
+            continue
+        }
+        return Some(x);
+    }
+    None
+}
+
 pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
     let mut v = Vec::with_capacity(1000);
     let mut start = 0;
-    let mut iterator = source.char_indices();
+    let mut iterator = source.char_indices().peekable();
 
     loop {
         let (mut pos, c) = match iterator.next() {
@@ -490,6 +561,14 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
                 v.pop();
                 if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
                     v.push(s);
+                }
+            } else if c == ReservedChar::Slash &&
+                      iterator.peek().is_some() &&
+                      iterator.peek().unwrap().1 != '/' &&
+                      iterator.peek().unwrap().1 != '*' &&
+                      !first_useful(&v).unwrap_or(&Token::String("")).is_other() {
+                if let Some(r) = get_regex(source, &mut iterator, &mut pos) {
+                    v.push(r);
                 }
             } else if c == ReservedChar::Star &&
                       *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Divide) {

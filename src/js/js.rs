@@ -275,3 +275,32 @@ search_input.onchange = function(e) {
                            setTimeout(search,0);};";
     assert_eq!(minify(source), expected_result);
 }
+
+#[test]
+fn check_regex() {
+    let source = r#"var x = /"\.x/g;"#;
+    let expected_result = r#"var x=/"\.x/g;"#;
+    assert_eq!(minify(source), expected_result);
+
+    let mut v = ::js::token::tokenize(source);
+    ::js::token::clean_tokens(&mut v);
+    assert_eq!(v.0[3],
+               ::js::token::Token::Regex {
+                   regex: "\"\\.x",
+                   is_global: true,
+                   is_interactive: false,
+               });
+
+    let source = r#"var x = /"\.x/gigigigig;var x = "hello";"#;
+    let expected_result = r#"var x=/"\.x/gi;var x="hello";"#;
+    assert_eq!(minify(source), expected_result);
+
+    let mut v = ::js::token::tokenize(source);
+    ::js::token::clean_tokens(&mut v);
+    assert_eq!(v.0[3],
+               ::js::token::Token::Regex {
+                   regex: "\"\\.x",
+                   is_global: true,
+                   is_interactive: true,
+               });
+}
