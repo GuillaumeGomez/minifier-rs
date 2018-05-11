@@ -442,10 +442,14 @@ fn get_line_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
 fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                  start_pos: &mut usize) -> Option<Token<'a>> {
     *start_pos += 1;
-    let mut prev = None;
     while let Some((pos, c)) = iterator.next() {
+        if c == '\\' {
+            // we skip next character
+            iterator.next();
+            continue
+        }
         if let Ok(c) = ReservedChar::try_from(c) {
-            if c == ReservedChar::Slash && prev != Some('\\') {
+            if c == ReservedChar::Slash {
                 let mut is_global = false;
                 let mut is_interactive = false;
                 let mut add = 0;
@@ -467,7 +471,6 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                 return ret;
             }
         }
-        prev = Some(c);
     }
     None
 }
@@ -507,18 +510,18 @@ fn get_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
 
 fn get_string<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>, start_pos: &mut usize,
                   start: ReservedChar) -> Option<Token<'a>> {
-    let mut prev = ReservedChar::Quote;
-
     while let Some((pos, c)) = iterator.next() {
+        if c == '\\' {
+            // we skip next character
+            iterator.next();
+            continue
+        }
         if let Ok(c) = ReservedChar::try_from(c) {
-            if c == start && prev != ReservedChar::Backslash {
+            if c == start {
                 let ret = Some(Token::String(&source[*start_pos..pos + 1]));
                 *start_pos = pos;
                 return ret;
             }
-            prev = c;
-        } else {
-            prev = ReservedChar::Space;
         }
     }
     None

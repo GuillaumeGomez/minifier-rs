@@ -191,6 +191,13 @@ pub fn minify(source: &str) -> String {
 }
 
 #[test]
+fn simple_quote() {
+    let source = r#"var x = "\\";"#;
+    let expected_result = r#"var x="\\";"#;
+    assert_eq!(minify(source), expected_result);
+}
+
+#[test]
 fn js_minify_test() {
     let source = r##"
 var foo = "something";
@@ -316,6 +323,19 @@ fn more_regex() {
     assert_eq!(v.0[3],
                ::js::token::Token::Regex {
                    regex: "\"\\.x\\/a",
+                   is_global: false,
+                   is_interactive: true,
+               });
+
+    let source = r#"var x = /\\/i;"#;
+    let expected_result = r#"var x=/\\/i;"#;
+    assert_eq!(minify(source), expected_result);
+
+    let mut v = ::js::token::tokenize(source);
+    ::js::token::clean_tokens(&mut v);
+    assert_eq!(v.0[3],
+               ::js::token::Token::Regex {
+                   regex: "\\\\",
                    is_global: false,
                    is_interactive: true,
                });
