@@ -178,12 +178,10 @@ pub enum Keyword {
     While,
 }
 
-impl Keyword {
-    pub fn get_required<'a>(&self, next: &Token<'a>) -> Option<char> {
-        match *next {
-            Token::Keyword(_) | Token::String(_) | Token::Other(_) => Some(' '),
-            _ => None,
-        }
+fn get_required<'a>(next: &Token<'a>) -> Option<char> {
+    match *next {
+        Token::Keyword(_) | Token::Other(_) => Some(' '),
+        _ => None,
     }
 }
 
@@ -447,7 +445,7 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
     let mut prev = None;
     while let Some((pos, c)) = iterator.next() {
         if let Ok(c) = ReservedChar::try_from(c) {
-            if c == ReservedChar::Slash && prev != Some(ReservedChar::Backslash) {
+            if c == ReservedChar::Slash && prev != Some('\\') {
                 let mut is_global = false;
                 let mut is_interactive = false;
                 let mut add = 0;
@@ -468,8 +466,8 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                 *start_pos = pos + add;
                 return ret;
             }
-            prev = Some(c);
         }
+        prev = Some(c);
     }
     None
 }
@@ -641,7 +639,8 @@ impl<'a> fmt::Display for Tokens<'a> {
         for i in 0..tokens.len() {
             write!(f, "{}", tokens[i])?;
             if let Some(c) = match tokens[i] {
-                Token::Keyword(x) if i + 1 < tokens.len() => x.get_required(&tokens[i + 1]),
+                Token::Keyword(_) |
+                Token::Other(_) if i + 1 < tokens.len() => get_required(&tokens[i + 1]),
                 _ => None,
             } {
                 write!(f, "{}", c)?;

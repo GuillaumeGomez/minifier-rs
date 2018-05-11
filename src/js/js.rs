@@ -320,3 +320,26 @@ fn more_regex() {
                    is_interactive: true,
                });
 }
+
+#[test]
+fn missing_whitespace() {
+    let source = r#"
+for (var entry in results) {
+    if (results.hasOwnProperty(entry)) {
+        ar.push(results[entry]);
+    }
+}"#;
+    let expected_result = "for(var entry in results){if(results.hasOwnProperty(entry)){\
+                           ar.push(results[entry]);}}";
+    assert_eq!(minify(source), expected_result);
+}
+
+#[test]
+fn weird_regex_issue() {
+    let source = r#"
+val = val.replace(/\_/g, "");
+
+var valGenerics = extractGenerics(val);"#;
+    let expected_result = "val=val.replace(/\\_/g,\"\");var valGenerics=extractGenerics(val);";
+    assert_eq!(minify(source), expected_result);
+}
