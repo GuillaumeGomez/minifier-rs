@@ -182,6 +182,7 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 
 pub fn minify(source: &str) -> String {
     let mut v = token::tokenize(source);
+    println!("{:?}", v.0);
     token::clean_tokens(&mut v);
     v.to_string()
     /*match build_ast(&v) {
@@ -256,5 +257,22 @@ console.log('done!');
  *
  * right?
  */function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i]);}}forEach([0,1,2,3,4,5,6,7,8,9],function(x){console.log(x);});console.log('done!');"#;
+    assert_eq!(minify(source), expected_result);
+}
+
+#[test]
+fn comment_issue() {
+    let source = r#"
+search_input.onchange = function(e) {
+    // Do NOT e.preventDefault() here. It will prevent pasting.
+    clearTimeout(searchTimeout);
+    // zero-timeout necessary here because at the time of event handler execution the
+    // pasted content is not in the input field yet. Shouldn’t make any difference for
+    // change, though.
+    setTimeout(search, 0);
+};
+"#;
+    let expected_result = "search_input.onchange=function(e){clearTimeout(searchTimeout);\
+                           setTimeout(search,0);};";
     assert_eq!(minify(source), expected_result);
 }

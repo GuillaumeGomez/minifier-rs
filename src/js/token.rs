@@ -21,8 +21,7 @@
 // SOFTWARE.
 
 use std::fmt;
-use std::iter::Enumerate;
-use std::str::Chars;
+use std::str::CharIndices;
 
 pub trait MyTryFrom<T>: Sized {
     type Error;
@@ -397,7 +396,7 @@ impl<'a> Token<'a> {
     }
 }
 
-fn get_line_comment<'a>(source: &'a str, iterator: &mut Enumerate<Chars>,
+fn get_line_comment<'a>(source: &'a str, iterator: &mut CharIndices,
                         start_pos: &mut usize) -> Option<Token<'a>> {
     *start_pos += 1;
     while let Some((pos, c)) = iterator.next() {
@@ -412,7 +411,7 @@ fn get_line_comment<'a>(source: &'a str, iterator: &mut Enumerate<Chars>,
     None
 }
 
-fn get_comment<'a>(source: &'a str, iterator: &mut Enumerate<Chars>,
+fn get_comment<'a>(source: &'a str, iterator: &mut CharIndices,
                    start_pos: &mut usize) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
     *start_pos += 1;
@@ -445,7 +444,7 @@ fn get_comment<'a>(source: &'a str, iterator: &mut Enumerate<Chars>,
     None
 }
 
-fn get_string<'a>(source: &'a str, iterator: &mut Enumerate<Chars>, start_pos: &mut usize,
+fn get_string<'a>(source: &'a str, iterator: &mut CharIndices, start_pos: &mut usize,
                   start: ReservedChar) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
 
@@ -467,7 +466,7 @@ fn get_string<'a>(source: &'a str, iterator: &mut Enumerate<Chars>, start_pos: &
 pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
     let mut v = Vec::with_capacity(1000);
     let mut start = 0;
-    let mut iterator = source.chars().enumerate();
+    let mut iterator = source.char_indices();
 
     loop {
         let (mut pos, c) = match iterator.next() {
