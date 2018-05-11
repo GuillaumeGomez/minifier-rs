@@ -182,7 +182,6 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 
 pub fn minify(source: &str) -> String {
     let mut v = token::tokenize(source);
-    println!("{:?}", v.0);
     token::clean_tokens(&mut v);
     v.to_string()
     /*match build_ast(&v) {
