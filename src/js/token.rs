@@ -444,9 +444,10 @@ fn get_line_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
 fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                  start_pos: &mut usize) -> Option<Token<'a>> {
     *start_pos += 1;
+    let mut prev = None;
     while let Some((pos, c)) = iterator.next() {
         if let Ok(c) = ReservedChar::try_from(c) {
-            if c == ReservedChar::Slash {
+            if c == ReservedChar::Slash && prev != Some(ReservedChar::Backslash) {
                 let mut is_global = false;
                 let mut is_interactive = false;
                 let mut add = 0;
@@ -467,6 +468,7 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                 *start_pos = pos + add;
                 return ret;
             }
+            prev = Some(c);
         }
     }
     None
