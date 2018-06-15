@@ -387,14 +387,14 @@ impl<'a> fmt::Display for Token<'a> {
 }
 
 impl<'a> Token<'a> {
-    fn is_comment(&self) -> bool {
+    pub fn is_comment(&self) -> bool {
         match *self {
             Token::Comment(_) => true,
             _ => false,
         }
     }
 
-    fn get_char(&self) -> Option<ReservedChar> {
+    pub fn get_char(&self) -> Option<ReservedChar> {
         match *self {
             Token::Char(c) => Some(c),
             _ => None,
@@ -402,24 +402,31 @@ impl<'a> Token<'a> {
     }
 
     #[allow(dead_code)]
-    fn is_condition(&self) -> bool {
+    pub fn is_condition(&self) -> bool {
         match *self {
             Token::Condition(_) => true,
             _ => false,
         }
     }
 
-    fn is_other(&self) -> bool {
+    pub fn is_other(&self) -> bool {
         match *self {
             Token::Other(_) => true,
             _ => false,
         }
     }
 
-    fn is_white_character(&self) -> bool {
+    pub fn is_white_character(&self) -> bool {
         match *self {
             Token::Char(c) => c.is_useless(),
             _ => false,
+        }
+    }
+
+    pub fn get_keyword(&self) -> Option<Keyword> {
+        match *self {
+            Token::Keyword(k) => Some(k),
+            _ => None,
         }
     }
 }

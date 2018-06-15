@@ -20,7 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-pub mod token;
-pub mod js;
+mod token;
+mod js;
 
-pub use self::js::minify;
+pub use self::js::{minify, minify_and_replace_keywords};
+pub use self::token::Keyword;
