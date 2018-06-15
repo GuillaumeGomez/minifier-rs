@@ -777,3 +777,16 @@ fn test_tokens_parsing() {
                  Token::Condition(Condition::SuperEqualTo),
                  Token::Other("3")]);
 }
+
+#[test]
+fn test_string_parsing() {
+    let source = "var x = 'hello people!'";
+
+    let mut v = tokenize(source);
+    clean_tokens(&mut v);
+    assert_eq!(&v.0,
+               &[Token::Keyword(Keyword::Var),
+                 Token::Other("x"),
+                 Token::Operation(Operation::Equal),
+                 Token::String("\'hello people!\'")]);
+}
