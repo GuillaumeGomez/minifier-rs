@@ -295,6 +295,18 @@ impl fmt::Display for Condition {
     }
 }
 
+impl MyTryFrom<ReservedChar> for Condition {
+    type Error = &'static str;
+
+    fn try_from(value: ReservedChar) -> Result<Condition, Self::Error> {
+        Ok(match value {
+            ReservedChar::SuperiorThan => Condition::SuperiorThan,
+            ReservedChar::LessThan => Condition::InferiorThan,
+            _ => return Err("Unkown condition"),
+        })
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Operation {
     Addition,
@@ -339,6 +351,7 @@ impl MyTryFrom<ReservedChar> for Operation {
             ReservedChar::Slash => Operation::Divide,
             ReservedChar::Star => Operation::Multiply,
             ReservedChar::Modulo => Operation::Modulo,
+            ReservedChar::EqualSign => Operation::Equal,
             _ => return Err("Unkown operation"),
         })
     }
@@ -552,7 +565,16 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
     loop {
         let (mut pos, c) = match iterator.next() {
             Some(x) => x,
-            None => break,
+            None => {
+                if start < source.len() {
+                    if let Ok(w) = Keyword::try_from(&source[start..]) {
+                        v.push(Token::Keyword(w));
+                    } else {
+                        v.push(Token::Other(&source[start..]));
+                    }
+                }
+                break
+            }
         };
         if let Ok(c) = ReservedChar::try_from(c) {
             if pos > start {
@@ -595,7 +617,7 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
                 v.pop();
                 v.push(Token::Condition(Condition::And));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::EqualSign) {
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Equal) {
                 v.pop();
                 v.push(Token::Condition(Condition::EqualTo));
             } else if c == ReservedChar::EqualSign &&
@@ -630,8 +652,18 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
                       *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Modulo) {
                 v.pop();
                 v.push(Token::Operation(Operation::ModuloEqual));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Condition(Condition::SuperiorThan) {
+                v.pop();
+                v.push(Token::Condition(Condition::SuperiorOrEqualTo));
+            } else if c == ReservedChar::EqualSign &&
+                      *v.last().unwrap_or(&Token::Other("")) == Token::Condition(Condition::InferiorThan) {
+                v.pop();
+                v.push(Token::Condition(Condition::InferiorOrEqualTo));
             } else if let Ok(o) = Operation::try_from(c) {
                 v.push(Token::Operation(o));
+            } else if let Ok(o) = Condition::try_from(c) {
+                v.push(Token::Condition(o));
             } else {
                 v.push(Token::Char(c));
             }
@@ -641,6 +673,7 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
     Tokens(v)
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Tokens<'a>(pub Vec<Token<'a>>);
 
 impl<'a> fmt::Display for Tokens<'a> {
@@ -670,4 +703,77 @@ pub fn clean_tokens<'a>(tokens: &mut Tokens<'a>) {
             }
         }
     });
+}
+
+#[test]
+fn check_regex() {
+    let source = r#"var x = /"\.x/g;"#;
+    let expected_result = r#"var x=/"\.x/g;"#;
+    assert_eq!(::js::minify(source), expected_result);
+
+    let mut v = tokenize(source);
+    clean_tokens(&mut v);
+    assert_eq!(v.0[3],
+               Token::Regex {
+                   regex: "\"\\.x",
+                   is_global: true,
+                   is_interactive: false,
+               });
+
+    let source = r#"var x = /"\.x/gigigigig;var x = "hello";"#;
+    let expected_result = r#"var x=/"\.x/gi;var x="hello";"#;
+    assert_eq!(::js::minify(source), expected_result);
+
+    let mut v = tokenize(source);
+    clean_tokens(&mut v);
+    assert_eq!(v.0[3],
+               Token::Regex {
+                   regex: "\"\\.x",
+                   is_global: true,
+                   is_interactive: true,
+               });
+}
+
+#[test]
+fn more_regex() {
+    let source = r#"var x = /"\.x\/a/i;"#;
+    let expected_result = r#"var x=/"\.x\/a/i;"#;
+    assert_eq!(::js::minify(source), expected_result);
+
+    let mut v = tokenize(source);
+    clean_tokens(&mut v);
+    assert_eq!(v.0[3],
+               Token::Regex {
+                   regex: "\"\\.x\\/a",
+                   is_global: false,
+                   is_interactive: true,
+               });
+
+    let source = r#"var x = /\\/i;"#;
+    let expected_result = r#"var x=/\\/i;"#;
+    assert_eq!(::js::minify(source), expected_result);
+
+    let mut v = tokenize(source);
+    clean_tokens(&mut v);
+    assert_eq!(v.0[3],
+               Token::Regex {
+                   regex: "\\\\",
+                   is_global: false,
+                   is_interactive: true,
+               });
+}
+
+#[test]
+fn test_tokens_parsing() {
+    let source = "true = == 2 === 3";
+
+    let mut v = tokenize(source);
+    clean_tokens(&mut v);
+    assert_eq!(&v.0,
+               &[Token::Keyword(Keyword::True),
+                 Token::Operation(Operation::Equal),
+                 Token::Condition(Condition::EqualTo),
+                 Token::Other("2"),
+                 Token::Condition(Condition::SuperEqualTo),
+                 Token::Other("3")]);
 }
