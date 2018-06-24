@@ -24,4 +24,3 @@ mod token;
 mod css;
 
 pub use self::css::minify;
-//pub use self::token::Keyword;

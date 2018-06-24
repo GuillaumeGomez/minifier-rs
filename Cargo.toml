@@ -1,13 +1,13 @@
 [package]
 name = "minifier"
-version = "0.0.13"
+version = "0.0.14"
 authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>"]
 
 description = "Minifier tool/lib for JS/CSS/HTML files"
 repository = "https://github.com/GuillaumeGomez/minifier-rs"
 documentation = "https://docs.rs/minifier-rs"
 readme = "README.md"
-keywords = ["minify", "minifier", "JS", "HTML"]
+keywords = ["minify", "minifier", "JS", "HTML", "CSS"]
 license = "MIT"
 
 [badges]
