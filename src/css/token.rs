@@ -699,3 +699,24 @@ fn check_media() {
                         Token::Char(ReservedChar::CloseCurlyBrace)];
     assert_eq!(tokenize(s), Ok(Tokens(expected)));
 }
+
+#[test]
+fn check_calc() {
+    let s = ".foo { width: calc(100% - 34px); }";
+
+    let expected = vec![Token::SelectorElement(SelectorElement::Class("foo")),
+                        Token::Char(ReservedChar::OpenCurlyBrace),
+                        Token::Other("width"),
+                        Token::Char(ReservedChar::Colon),
+                        Token::Other("calc"),
+                        Token::Char(ReservedChar::OpenParenthese),
+                        Token::Other("100%"),
+                        Token::Char(ReservedChar::Space),
+                        Token::Other("-"),
+                        Token::Char(ReservedChar::Space),
+                        Token::Other("34px"),
+                        Token::Char(ReservedChar::CloseParenthese),
+                        Token::Char(ReservedChar::SemiColon),
+                        Token::Char(ReservedChar::CloseCurlyBrace)];
+    assert_eq!(tokenize(s), Ok(Tokens(expected)));
+}
