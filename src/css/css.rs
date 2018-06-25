@@ -215,3 +215,17 @@ h2, h3:not(.impl):not(.method):not(.type) {
                     \"Liberation Mono\",Menlo,Courier,monospace;}}";
     assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
 }
+
+#[test]
+fn check_calc() {
+    let s = ".foo { width: calc(100% - 34px); }";
+    let expected = ".foo{width:calc(100% - 34px);}";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+}
+
+#[test]
+fn check_spaces() {
+    let s = ".line-numbers .line-highlighted { color: #0a042f !important; }";
+    let expected = ".line-numbers .line-highlighted{color:#0a042f !important;}";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+}
