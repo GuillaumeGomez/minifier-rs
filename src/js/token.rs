@@ -414,10 +414,23 @@ impl<'a> Token<'a> {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn is_condition(&self) -> bool {
+    pub fn is_char(&self, rc: ReservedChar) -> bool {
         match *self {
-            Token::Condition(_) => true,
+            Token::Char(c) => c == rc,
+            _ => false,
+        }
+    }
+
+    pub fn is_operation(&self, ope: Operation) -> bool {
+        match *self {
+            Token::Operation(o) => o == ope,
+            _ => false,
+        }
+    }
+
+    pub fn is_condition(&self, cond: Condition) -> bool {
+        match *self {
+            Token::Condition(c) => c == cond,
             _ => false,
         }
     }
@@ -475,8 +488,8 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                 let mut add = 0;
                 loop {
                     match iterator.peek() {
-                        Some((_, 'i')) => is_interactive = true,
-                        Some((_, 'g')) => is_global = true,
+                        Some(&(_, 'i')) => is_interactive = true,
+                        Some(&(_, 'g')) => is_global = true,
                         _ => break,
                     };
                     iterator.next();
@@ -484,8 +497,8 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                 }
                 let ret = Some(Token::Regex {
                                    regex: &source[*start_pos..pos],
-                                   is_interactive,
-                                   is_global
+                                   is_interactive: is_interactive,
+                                   is_global: is_global,
                                });
                 *start_pos = pos + add;
                 return ret;
@@ -557,6 +570,16 @@ fn first_useful<'a>(v: &'a [Token<'a>]) -> Option<&'a Token<'a>> {
     None
 }
 
+fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: usize) {
+    if start < pos {
+        if let Ok(w) = Keyword::try_from(&source[start..pos]) {
+            v.push(Token::Keyword(w));
+        } else {
+            v.push(Token::Other(&source[start..pos]));
+        }
+    }
+}
+
 pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
     let mut v = Vec::with_capacity(1000);
     let mut start = 0;
@@ -566,30 +589,18 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
         let (mut pos, c) = match iterator.next() {
             Some(x) => x,
             None => {
-                if start < source.len() {
-                    if let Ok(w) = Keyword::try_from(&source[start..]) {
-                        v.push(Token::Keyword(w));
-                    } else {
-                        v.push(Token::Other(&source[start..]));
-                    }
-                }
+                fill_other(source, &mut v, start, source.len());
                 break
             }
         };
         if let Ok(c) = ReservedChar::try_from(c) {
-            if pos > start {
-                if let Ok(w) = Keyword::try_from(&source[start..pos]) {
-                    v.push(Token::Keyword(w));
-                } else {
-                    v.push(Token::Other(&source[start..pos]));
-                }
-            }
+            fill_other(source, &mut v, start, pos);
             if c == ReservedChar::Quote || c == ReservedChar::DoubleQuote {
                 if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
                     v.push(s);
                 }
             } else if c == ReservedChar::Slash &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Divide) {
+                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) {
                 v.pop();
                 if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
                     v.push(s);
@@ -603,61 +614,61 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
                     v.push(r);
                 }
             } else if c == ReservedChar::Star &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Divide) {
+                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) {
                 v.pop();
                 if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
                     v.push(s);
                 }
             } else if c == ReservedChar::Pipe &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::Pipe) {
+                      v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::Pipe) {
                 v.pop();
                 v.push(Token::Condition(Condition::Or));
             } else if c == ReservedChar::Ampersand &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::Ampersand) {
+                      v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::Ampersand) {
                 v.pop();
                 v.push(Token::Condition(Condition::And));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Equal) {
+                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Equal) {
                 v.pop();
                 v.push(Token::Condition(Condition::EqualTo));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Condition(Condition::EqualTo) {
+                      v.last().unwrap_or(&Token::Other("")).is_condition(Condition::EqualTo) {
                 v.pop();
                 v.push(Token::Condition(Condition::SuperEqualTo));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Char(ReservedChar::ExclamationMark) {
+                      v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::ExclamationMark) {
                 v.pop();
                 v.push(Token::Condition(Condition::DifferentThan));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Condition(Condition::DifferentThan) {
+                      v.last().unwrap_or(&Token::Other("")).is_condition(Condition::DifferentThan) {
                 v.pop();
                 v.push(Token::Condition(Condition::SuperDifferentThan));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Divide) {
+                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) {
                 v.pop();
                 v.push(Token::Operation(Operation::DivideEqual));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Multiply) {
+                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Multiply) {
                 v.pop();
                 v.push(Token::Operation(Operation::MultiplyEqual));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Addition) {
+                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Addition) {
                 v.pop();
                 v.push(Token::Operation(Operation::AdditionEqual));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Subtract) {
+                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Subtract) {
                 v.pop();
                 v.push(Token::Operation(Operation::SubtractEqual));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Operation(Operation::Modulo) {
+                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Modulo) {
                 v.pop();
                 v.push(Token::Operation(Operation::ModuloEqual));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Condition(Condition::SuperiorThan) {
+                      v.last().unwrap_or(&Token::Other("")).is_condition(Condition::SuperiorThan) {
                 v.pop();
                 v.push(Token::Condition(Condition::SuperiorOrEqualTo));
             } else if c == ReservedChar::EqualSign &&
-                      *v.last().unwrap_or(&Token::Other("")) == Token::Condition(Condition::InferiorThan) {
+                      v.last().unwrap_or(&Token::Other("")).is_condition(Condition::InferiorThan) {
                 v.pop();
                 v.push(Token::Condition(Condition::InferiorOrEqualTo));
             } else if let Ok(o) = Operation::try_from(c) {
