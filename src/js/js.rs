@@ -194,10 +194,10 @@ pub fn minify_and_replace_keywords(source: &str,
                                    keywords_to_replace: &[(token::Keyword, &str)]) -> String {
     let mut v = token::tokenize(source);
     token::clean_tokens(&mut v);
-    for (keyword, replacement) in keywords_to_replace {
+    for &(keyword, replacement) in keywords_to_replace {
         for token in v.0.iter_mut() {
             if match token.get_keyword() {
-                Some(ref k) => k == keyword,
+                Some(ref k) => *k == keyword,
                 _ => false,
             } {
                 *token = token::Token::Other(replacement);

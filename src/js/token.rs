@@ -488,8 +488,8 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                 let mut add = 0;
                 loop {
                     match iterator.peek() {
-                        Some((_, 'i')) => is_interactive = true,
-                        Some((_, 'g')) => is_global = true,
+                        Some(&(_, 'i')) => is_interactive = true,
+                        Some(&(_, 'g')) => is_global = true,
                         _ => break,
                     };
                     iterator.next();
@@ -497,8 +497,8 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                 }
                 let ret = Some(Token::Regex {
                                    regex: &source[*start_pos..pos],
-                                   is_interactive,
-                                   is_global
+                                   is_interactive: is_interactive,
+                                   is_global: is_global,
                                });
                 *start_pos = pos + add;
                 return ret;
