@@ -595,88 +595,108 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
         };
         if let Ok(c) = ReservedChar::try_from(c) {
             fill_other(source, &mut v, start, pos);
-            if c == ReservedChar::Quote || c == ReservedChar::DoubleQuote {
-                if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
-                    v.push(s);
+            if_match! {
+                c == ReservedChar::Quote || c == ReservedChar::DoubleQuote =>
+                    if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
+                        v.push(s);
+                    },
+                c == ReservedChar::Slash &&
+                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) => {
+                    v.pop();
+                    if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
+                        v.push(s);
+                    }
+                },
+                c == ReservedChar::Slash &&
+                iterator.peek().is_some() &&
+                iterator.peek().unwrap().1 != '/' &&
+                iterator.peek().unwrap().1 != '*' &&
+                !first_useful(&v).unwrap_or(&Token::String("")).is_other() => {
+                    if let Some(r) = get_regex(source, &mut iterator, &mut pos) {
+                        v.push(r);
+                    }
+                },
+                c == ReservedChar::Star &&
+                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) => {
+                    v.pop();
+                    if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
+                        v.push(s);
+                    }
+                },
+                c == ReservedChar::Pipe &&
+                v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::Pipe) => {
+                    v.pop();
+                    v.push(Token::Condition(Condition::Or));
+                },
+                c == ReservedChar::Ampersand &&
+                v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::Ampersand) => {
+                    v.pop();
+                    v.push(Token::Condition(Condition::And));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Equal) => {
+                    v.pop();
+                    v.push(Token::Condition(Condition::EqualTo));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_condition(Condition::EqualTo) => {
+                    v.pop();
+                    v.push(Token::Condition(Condition::SuperEqualTo));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::ExclamationMark) => {
+                    v.pop();
+                    v.push(Token::Condition(Condition::DifferentThan));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_condition(Condition::DifferentThan) => {
+                    v.pop();
+                    v.push(Token::Condition(Condition::SuperDifferentThan));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) => {
+                    v.pop();
+                    v.push(Token::Operation(Operation::DivideEqual));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Multiply) => {
+                    v.pop();
+                    v.push(Token::Operation(Operation::MultiplyEqual));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Addition) => {
+                    v.pop();
+                    v.push(Token::Operation(Operation::AdditionEqual));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Subtract) => {
+                    v.pop();
+                    v.push(Token::Operation(Operation::SubtractEqual));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Modulo) => {
+                    v.pop();
+                    v.push(Token::Operation(Operation::ModuloEqual));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_condition(Condition::SuperiorThan) => {
+                    v.pop();
+                    v.push(Token::Condition(Condition::SuperiorOrEqualTo));
+                },
+                c == ReservedChar::EqualSign &&
+                v.last().unwrap_or(&Token::Other("")).is_condition(Condition::InferiorThan) => {
+                    v.pop();
+                    v.push(Token::Condition(Condition::InferiorOrEqualTo));
+                },
+                let Ok(o) = Operation::try_from(c) => {
+                    v.push(Token::Operation(o));
+                },
+                let Ok(o) = Condition::try_from(c) => {
+                    v.push(Token::Condition(o));
+                },
+                else => {
+                    v.push(Token::Char(c));
                 }
-            } else if c == ReservedChar::Slash &&
-                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) {
-                v.pop();
-                if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
-                    v.push(s);
-                }
-            } else if c == ReservedChar::Slash &&
-                      iterator.peek().is_some() &&
-                      iterator.peek().unwrap().1 != '/' &&
-                      iterator.peek().unwrap().1 != '*' &&
-                      !first_useful(&v).unwrap_or(&Token::String("")).is_other() {
-                if let Some(r) = get_regex(source, &mut iterator, &mut pos) {
-                    v.push(r);
-                }
-            } else if c == ReservedChar::Star &&
-                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) {
-                v.pop();
-                if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
-                    v.push(s);
-                }
-            } else if c == ReservedChar::Pipe &&
-                      v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::Pipe) {
-                v.pop();
-                v.push(Token::Condition(Condition::Or));
-            } else if c == ReservedChar::Ampersand &&
-                      v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::Ampersand) {
-                v.pop();
-                v.push(Token::Condition(Condition::And));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Equal) {
-                v.pop();
-                v.push(Token::Condition(Condition::EqualTo));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_condition(Condition::EqualTo) {
-                v.pop();
-                v.push(Token::Condition(Condition::SuperEqualTo));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::ExclamationMark) {
-                v.pop();
-                v.push(Token::Condition(Condition::DifferentThan));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_condition(Condition::DifferentThan) {
-                v.pop();
-                v.push(Token::Condition(Condition::SuperDifferentThan));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) {
-                v.pop();
-                v.push(Token::Operation(Operation::DivideEqual));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Multiply) {
-                v.pop();
-                v.push(Token::Operation(Operation::MultiplyEqual));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Addition) {
-                v.pop();
-                v.push(Token::Operation(Operation::AdditionEqual));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Subtract) {
-                v.pop();
-                v.push(Token::Operation(Operation::SubtractEqual));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Modulo) {
-                v.pop();
-                v.push(Token::Operation(Operation::ModuloEqual));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_condition(Condition::SuperiorThan) {
-                v.pop();
-                v.push(Token::Condition(Condition::SuperiorOrEqualTo));
-            } else if c == ReservedChar::EqualSign &&
-                      v.last().unwrap_or(&Token::Other("")).is_condition(Condition::InferiorThan) {
-                v.pop();
-                v.push(Token::Condition(Condition::InferiorOrEqualTo));
-            } else if let Ok(o) = Operation::try_from(c) {
-                v.push(Token::Operation(o));
-            } else if let Ok(o) = Condition::try_from(c) {
-                v.push(Token::Condition(o));
-            } else {
-                v.push(Token::Char(c));
             }
             start = pos + 1;
         }

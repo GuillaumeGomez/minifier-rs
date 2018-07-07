@@ -421,68 +421,79 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
             is_in_media = is_in_media || v.last()
                                           .unwrap_or(&Token::Char(ReservedChar::Space))
                                           .is_media("media");
-            if c == ReservedChar::Quote || c == ReservedChar::DoubleQuote {
-                if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
-                    v.push(s);
-                }
-            } else if c == ReservedChar::Star &&
-                      *v.last().unwrap_or(&Token::Char(ReservedChar::Space)) == ReservedChar::Slash {
-                v.pop();
-                if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
-                    v.push(s);
-                }
-            } else if c == ReservedChar::Slash &&
-                      *v.last().unwrap_or(&Token::Char(ReservedChar::Space)) == ReservedChar::Slash {
-                v.pop();
-                if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
-                    v.push(s);
-                }
-            } else if c == ReservedChar::OpenBracket {
-                if is_in_attribute_selector {
-                    return Err("Already in attribute selector");
-                }
-                is_in_attribute_selector = true;
-                v.push(Token::Char(c));
-            } else if c == ReservedChar::CloseBracket {
-                if !is_in_attribute_selector {
-                    return Err("Unexpected ']'");
-                }
-                is_in_attribute_selector = false;
-                v.push(Token::Char(c));
-            } else if c == ReservedChar::OpenCurlyBrace {
-                is_in_block += 1;
-                v.push(Token::Char(c));
-            } else if c == ReservedChar::CloseCurlyBrace {
-                is_in_block -= 1;
-                if is_in_block < 0 {
-                    return Err("Too much '}'");
-                } else if is_in_block == 0 {
-                    is_in_media = false;
-                }
-                v.push(Token::Char(c));
-            } else if c == ReservedChar::EqualSign {
-                match match v.last()
-                             .unwrap_or(&Token::Char(ReservedChar::Space))
-                             .get_char()
-                             .unwrap_or(ReservedChar::Space) {
-                    ReservedChar::Tilde => Some(SelectorOperator::OneAttributeEquals),
-                    ReservedChar::Pipe => Some(SelectorOperator::EqualsOrStartsWithFollowedByDash),
-                    ReservedChar::Dollar => Some(SelectorOperator::EndsWith),
-                    ReservedChar::Circumflex => Some(SelectorOperator::FirstStartsWith),
-                    ReservedChar::Star => Some(SelectorOperator::Contains),
-                    _ => None,
-                } {
-                    Some(r) => {
-                        v.pop();
-                        v.push(Token::SelectorOperator(r));
+            if_match! {
+                c == ReservedChar::Quote || c == ReservedChar::DoubleQuote => {
+                    if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
+                        v.push(s);
                     }
-                    None => v.push(Token::Char(c)),
-                }
-            } else if !c.is_useless() {
-                v.push(Token::Char(c));
-            } else if !v.last().unwrap_or(&Token::Char(ReservedChar::Space)).is_useless() &&
-                      !v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_char() {
-                v.push(Token::Char(ReservedChar::Space));
+                },
+                c == ReservedChar::Star &&
+                *v.last().unwrap_or(&Token::Char(ReservedChar::Space)) == ReservedChar::Slash => {
+                    v.pop();
+                    if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
+                        v.push(s);
+                    }
+                },
+                c == ReservedChar::Slash &&
+                *v.last().unwrap_or(&Token::Char(ReservedChar::Space)) == ReservedChar::Slash => {
+                    v.pop();
+                    if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
+                        v.push(s);
+                    }
+                },
+                c == ReservedChar::OpenBracket => {
+                    if is_in_attribute_selector {
+                        return Err("Already in attribute selector");
+                    }
+                    is_in_attribute_selector = true;
+                    v.push(Token::Char(c));
+                },
+                c == ReservedChar::CloseBracket => {
+                    if !is_in_attribute_selector {
+                        return Err("Unexpected ']'");
+                    }
+                    is_in_attribute_selector = false;
+                    v.push(Token::Char(c));
+                },
+                c == ReservedChar::OpenCurlyBrace => {
+                    is_in_block += 1;
+                    v.push(Token::Char(c));
+                },
+                c == ReservedChar::CloseCurlyBrace => {
+                    is_in_block -= 1;
+                    if is_in_block < 0 {
+                        return Err("Too much '}'");
+                    } else if is_in_block == 0 {
+                        is_in_media = false;
+                    }
+                    v.push(Token::Char(c));
+                },
+                c == ReservedChar::EqualSign => {
+                    match match v.last()
+                                 .unwrap_or(&Token::Char(ReservedChar::Space))
+                                 .get_char()
+                                 .unwrap_or(ReservedChar::Space) {
+                        ReservedChar::Tilde => Some(SelectorOperator::OneAttributeEquals),
+                        ReservedChar::Pipe => Some(SelectorOperator::EqualsOrStartsWithFollowedByDash),
+                        ReservedChar::Dollar => Some(SelectorOperator::EndsWith),
+                        ReservedChar::Circumflex => Some(SelectorOperator::FirstStartsWith),
+                        ReservedChar::Star => Some(SelectorOperator::Contains),
+                        _ => None,
+                    } {
+                        Some(r) => {
+                            v.pop();
+                            v.push(Token::SelectorOperator(r));
+                        }
+                        None => v.push(Token::Char(c)),
+                    }
+                },
+                !c.is_useless() => {
+                    v.push(Token::Char(c));
+                },
+                !v.last().unwrap_or(&Token::Char(ReservedChar::Space)).is_useless() &&
+                !v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_char() => {
+                    v.push(Token::Char(ReservedChar::Space));
+                },
             }
             start = pos + 1;
         }

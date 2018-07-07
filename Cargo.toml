@@ -1,6 +1,6 @@
 [package]
 name = "minifier"
-version = "0.0.14"
+version = "0.0.15"
 authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>"]
 
 description = "Minifier tool/lib for JS/CSS/HTML files"
@@ -16,6 +16,7 @@ travis-ci = { repository = "GuillaumeGomez/minifier-rs" }
 
 [dependencies]
 regex = "0.2"
+macro-utils = "^0.1"
 
 [lib]
 name = "minifier"
