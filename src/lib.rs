@@ -26,4 +26,5 @@ extern crate regex;
 
 pub mod html;
 pub mod js;
+pub mod json;
 pub mod css;
