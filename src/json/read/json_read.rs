@@ -70,7 +70,7 @@ impl<P, R> Read for JsonRead<P, R>
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         let mut buf_pos: usize = 0;
 
-        if buf.len() == 0 {
+        if buf.is_empty() {
             return Ok(0);
         }
 

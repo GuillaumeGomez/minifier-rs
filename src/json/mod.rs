@@ -3,6 +3,7 @@ use std::io::Read;
 
 mod read {
     mod byte_to_char;
+    mod internal_buffer;
     mod internal_reader;
     pub mod json_read;
 }
