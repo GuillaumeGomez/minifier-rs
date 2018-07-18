@@ -1,28 +1,27 @@
-use std::{fmt, io::{Error, Read}, vec::IntoIter};
-
-const ARRAY_DEFAULT: u8 = 0;
+use std::{fmt, io::{Error, Read}};
+use super::internal_buffer::Buffer;
 
 pub struct InternalReader<R> {
     read: R,
     buffer_size: usize,
-    buffer_iter: (IntoIter<u8>, bool),
+    buffer: Buffer,
 }
 
 impl<R: Read> InternalReader<R> {
     pub fn new(mut read: R, buffer_size: usize) -> Result<Self, Error> {
-        let buffer = InternalReader::read_data(&mut read, buffer_size)?;
+        let mut buffer = Buffer::new(buffer_size);
+        InternalReader::read_data(&mut read, &mut buffer)?;
         Ok(InternalReader {
             read,
             buffer_size,
-            buffer_iter: buffer,
+            buffer,
         })
     }
 
-    fn read_data(read: &mut R, buffer_size: usize) -> Result<(IntoIter<u8>, bool), Error> {
-        let mut buffer = vec![ARRAY_DEFAULT; buffer_size];
-        let size = read.read(&mut buffer)?;
-        buffer.truncate(size);
-        Ok((buffer.into_iter(), size == buffer_size))
+    fn read_data(read: &mut R, buffer: &mut Buffer) -> Result<(), Error> {
+        let size = read.read(buffer.as_mut())?;
+        buffer.update_metadata(size);
+        Ok(())
     }
 }
 
@@ -31,7 +30,7 @@ impl<R: Read + fmt::Debug> fmt::Debug for InternalReader<R> {
         f.debug_struct("JsonReader")
             .field("read", &self.read)
             .field("buffer_size", &self.buffer_size)
-            .field("buffer", &self.buffer_iter)
+            .field("buffer", &self.buffer)
             .finish()
     }
 }
@@ -45,12 +44,11 @@ impl<R: Read> Iterator for InternalReader<R> {
             return None;
         }
         loop {
-            if let Some(item) = self.buffer_iter.0.next() {
+            if let Some(item) = self.buffer.next() {
                 return Some(Ok(item));
-            } else if self.buffer_iter.1 {
-                match InternalReader::read_data(&mut self.read, self.buffer_size) {
-                    Ok(item) => self.buffer_iter = item,
-                    Err(err) => return Some(Err(err)),
+            } else if self.buffer.cont() {
+                if let Err(err) = InternalReader::read_data(&mut self.read, &mut self.buffer) {
+                    return Some(Err(err));
                 };
             } else {
                 return None;
