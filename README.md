@@ -2,7 +2,7 @@
 
 # minifier-rs
 
-Minifier tool/lib for JS/CSS/HTML files.
+Minifier tool/lib for JS/CSS/JSON files.
 
 This crate provides both a library and binary, depending on your needs.
 
@@ -18,7 +18,7 @@ To use the library, add it into your `Cargo.toml` file like this:
 
 ```toml
 [dependencies]
-minifier = "0.0.1"
+minifier = "^0.0.1"
 ```
 
 Then import it into your code like this:
