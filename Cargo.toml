@@ -1,9 +1,9 @@
 [package]
 name = "minifier"
-version = "0.0.15"
+version = "0.0.16"
 authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>"]
 
-description = "Minifier tool/lib for JS/CSS/HTML files"
+description = "Minifier tool/lib for JS/CSS/JSON files"
 repository = "https://github.com/GuillaumeGomez/minifier-rs"
 documentation = "https://docs.rs/minifier-rs"
 readme = "README.md"
