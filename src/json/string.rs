@@ -25,10 +25,10 @@ impl<I: Iterator, P> JsonMultiFilter<I, P> {
 impl<I: Iterator + fmt::Debug, P> fmt::Debug for JsonMultiFilter<I, P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Filter")
-            .field("minifier", &self.minifier)
-            .field("iter", &self.iter)
-            .field("initialized", &self.initialized)
-            .finish()
+         .field("minifier", &self.minifier)
+         .field("iter", &self.iter)
+         .field("initialized", &self.initialized)
+         .finish()
     }
 }
 

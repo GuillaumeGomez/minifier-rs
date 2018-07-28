@@ -180,6 +180,25 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
     }
 }*/
 
+/// Minifies a given JS source code.
+///
+/// # Example
+///
+/// ```rust
+/// extern crate minifier;
+/// use minifier::js::minify;
+///
+/// fn main() {
+///     let js = r#"
+///         function forEach(data, func) {
+///            for (var i = 0; i < data.length; ++i) {
+///                func(data[i]);
+///            }
+///         }"#.into();
+///     let js_minified = minify(js);
+/// }
+/// ```
+#[inline]
 pub fn minify(source: &str) -> String {
     let mut v = token::tokenize(source);
     token::clean_tokens(&mut v);
@@ -190,6 +209,37 @@ pub fn minify(source: &str) -> String {
     }*/
 }
 
+
+/// Minifies a given JS source code and to replace keywords.
+///
+/// # Example
+///
+/// ```rust
+/// extern crate minifier;
+/// use minifier::js::{Keyword, minify_and_replace_keywords};
+///
+/// fn main() {
+///     let js = r#"
+///         function replaceByNull(data, func) {
+///             for (var i = 0; i < data.length; ++i) {
+///                 if func(data[i]) {
+///                     data[i] = null;
+///                 }
+///             }
+///         }
+///     }"#.into();
+///     let js_minified = minify_and_replace_keywords(js, &[(Keyword::Null, "N")]);
+///     println!("{}", js_minified);
+/// }
+/// ```
+///
+/// The previous code will have all its `null` keywords replaced with `N`. In such cases,
+/// don't forget to include the definition of `N` in the returned minified javascript:
+///
+/// ```js
+/// var N = null;
+/// ```
+#[inline]
 pub fn minify_and_replace_keywords(source: &str,
                                    keywords_to_replace: &[(token::Keyword, &str)]) -> String {
     let mut v = token::tokenize(source);
@@ -333,3 +383,15 @@ var n = null;
     assert_eq!(minify_and_replace_keywords(source, &[(token::Keyword::Null, "N")]),
                expected_result);
 }
+
+// TODO: requires AST to fix this issue!
+/*#[test]
+fn no_semi_colon() {
+    let source = r#"
+console.log(1)
+console.log(2)
+var x = 12;
+"#;
+    let expected_result = r#"console.log(1);console.log(2);var x=12;"#;
+    assert_eq!(minify(source), expected_result);
+}*/

@@ -580,6 +580,62 @@ fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: us
     }
 }
 
+fn handle_equal_sign(v: &mut Vec<Token>, c: ReservedChar) -> bool {
+    if c != ReservedChar::EqualSign {
+        return false;
+    }
+    if_match! {
+        v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Equal) => {
+            v.pop();
+            v.push(Token::Condition(Condition::EqualTo));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_condition(Condition::EqualTo) => {
+            v.pop();
+            v.push(Token::Condition(Condition::SuperEqualTo));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::ExclamationMark) => {
+            v.pop();
+            v.push(Token::Condition(Condition::DifferentThan));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_condition(Condition::DifferentThan) => {
+            v.pop();
+            v.push(Token::Condition(Condition::SuperDifferentThan));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) => {
+            v.pop();
+            v.push(Token::Operation(Operation::DivideEqual));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Multiply) => {
+            v.pop();
+            v.push(Token::Operation(Operation::MultiplyEqual));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Addition) => {
+            v.pop();
+            v.push(Token::Operation(Operation::AdditionEqual));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Subtract) => {
+            v.pop();
+            v.push(Token::Operation(Operation::SubtractEqual));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Modulo) => {
+            v.pop();
+            v.push(Token::Operation(Operation::ModuloEqual));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_condition(Condition::SuperiorThan) => {
+            v.pop();
+            v.push(Token::Condition(Condition::SuperiorOrEqualTo));
+        },
+        v.last().unwrap_or(&Token::Other("")).is_condition(Condition::InferiorThan) => {
+            v.pop();
+            v.push(Token::Condition(Condition::InferiorOrEqualTo));
+        },
+        else => {
+            return false;
+        }
+    }
+    true
+}
+
 pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
     let mut v = Vec::with_capacity(1000);
     let mut start = 0;
@@ -633,61 +689,7 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
                     v.pop();
                     v.push(Token::Condition(Condition::And));
                 },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Equal) => {
-                    v.pop();
-                    v.push(Token::Condition(Condition::EqualTo));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_condition(Condition::EqualTo) => {
-                    v.pop();
-                    v.push(Token::Condition(Condition::SuperEqualTo));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_char(ReservedChar::ExclamationMark) => {
-                    v.pop();
-                    v.push(Token::Condition(Condition::DifferentThan));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_condition(Condition::DifferentThan) => {
-                    v.pop();
-                    v.push(Token::Condition(Condition::SuperDifferentThan));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Divide) => {
-                    v.pop();
-                    v.push(Token::Operation(Operation::DivideEqual));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Multiply) => {
-                    v.pop();
-                    v.push(Token::Operation(Operation::MultiplyEqual));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Addition) => {
-                    v.pop();
-                    v.push(Token::Operation(Operation::AdditionEqual));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Subtract) => {
-                    v.pop();
-                    v.push(Token::Operation(Operation::SubtractEqual));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_operation(Operation::Modulo) => {
-                    v.pop();
-                    v.push(Token::Operation(Operation::ModuloEqual));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_condition(Condition::SuperiorThan) => {
-                    v.pop();
-                    v.push(Token::Condition(Condition::SuperiorOrEqualTo));
-                },
-                c == ReservedChar::EqualSign &&
-                v.last().unwrap_or(&Token::Other("")).is_condition(Condition::InferiorThan) => {
-                    v.pop();
-                    v.push(Token::Condition(Condition::InferiorOrEqualTo));
-                },
+                handle_equal_sign(&mut v, c) => {},
                 let Ok(o) = Operation::try_from(c) => {
                     v.push(Token::Operation(o));
                 },

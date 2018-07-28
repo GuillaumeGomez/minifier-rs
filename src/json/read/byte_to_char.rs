@@ -27,8 +27,8 @@ impl<R: Read> ByteToChar<R> {
 impl<R: Read + fmt::Debug> fmt::Debug for ByteToChar<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Filter")
-            .field("iter", &self.iter)
-            .finish()
+         .field("iter", &self.iter)
+         .finish()
     }
 }
 
