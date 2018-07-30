@@ -1,6 +1,6 @@
 [package]
 name = "minifier"
-version = "0.0.16"
+version = "0.0.17"
 authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>"]
 
 description = "Minifier tool/lib for JS/CSS/JSON files"
@@ -15,7 +15,7 @@ appveyor = { repository = "GuillaumeGomez/minifier-rs", service = "github" }
 travis-ci = { repository = "GuillaumeGomez/minifier-rs" }
 
 [dependencies]
-regex = "0.2"
+regex = "1.0"
 macro-utils = "^0.1"
 
 [lib]
