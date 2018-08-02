@@ -395,3 +395,16 @@ var x = 12;
     let expected_result = r#"console.log(1);console.log(2);var x=12;"#;
     assert_eq!(minify(source), expected_result);
 }*/
+
+// TODO: requires AST to fix this issue!
+/*#[test]
+fn correct_replace_for_backline() {
+    let source = r#"
+function foo() {
+    return
+    12;
+}
+"#;
+    let expected_result = r#"function foo(){return;12;}"#;
+    assert_eq!(minify(source), expected_result);
+}*/
