@@ -246,3 +246,10 @@ fn check_spaces() {
     let expected = ".line-numbers .line-highlighted{color:#0a042f !important;}";
     assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
 }
+
+#[test]
+fn check_space_after_paren() {
+    let s = ".docblock:not(.type-decl) a:not(.srclink) {}";
+    let expected = ".docblock:not(.type-decl) a:not(.srclink){}";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+}
