@@ -389,7 +389,7 @@ fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: us
                 let s = &source[start..pos];
                 if !s.starts_with(':') && !s.starts_with('.') && !s.starts_with('#') &&
                    !s.starts_with('@') {
-                   v.push(Token::Other(s));
+                    v.push(Token::Other(s));
                }
             }
         } else {
@@ -491,7 +491,9 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
                     v.push(Token::Char(c));
                 },
                 !v.last().unwrap_or(&Token::Char(ReservedChar::Space)).is_useless() &&
-                !v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_char() => {
+                (!v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_char() ||
+                 v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
+                         .get_char() == Some(ReservedChar::CloseParenthese)) => {
                     v.push(Token::Char(ReservedChar::Space));
                 },
             }
@@ -506,7 +508,8 @@ fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
 
     while i < v.len() {
         if v[i].is_useless() {
-            if (i > 0 && (v[i - 1].is_char() ||
+            if (i > 0 && ((v[i - 1].is_char() &&
+                           v[i - 1] != Token::Char(ReservedChar::CloseParenthese)) ||
                           v[i - 1].is_a_media() ||
                           v[i - 1].is_a_license())) ||
                (i < v.len() - 1 && v[i + 1].is_char()) {
@@ -708,6 +711,7 @@ fn check_media() {
                         Token::Other("red"),
                         Token::Char(ReservedChar::SemiColon),
                         Token::Char(ReservedChar::CloseCurlyBrace)];
+
     assert_eq!(tokenize(s), Ok(Tokens(expected)));
 }
 
