@@ -28,14 +28,14 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use minifier::{html, js};
+use minifier::{css, js, json};
 
 fn print_help() {
     println!(r##"For now, this minifier supports the following type of files:
 
+ * .css
  * .js
- * .html
- * .htm"##);
+ * .json"##);
 }
 
 pub fn get_all_data(file_path: &str) -> io::Result<String> {
@@ -92,8 +92,10 @@ fn main() {
             continue
         }
         match p.extension().unwrap_or(OsStr::new("")).to_str().unwrap_or("") {
+	    "css" => call_minifier(arg, |s| css::minify(s).expect("css minification failed")),
             "js" => call_minifier(arg, js::minify),
-            "html" | "htm" => call_minifier(arg, html::minify),
+	    "json" => call_minifier(arg, json::minify),
+	    // "html" | "htm" => call_minifier(arg, html::minify),
             x => println!("\"{}\": this format isn't supported", x),
         }
     }

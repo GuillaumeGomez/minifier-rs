@@ -22,9 +22,11 @@
 
 #[macro_use]
 extern crate macro_utils;
+#[cfg(feature = "html")]
 extern crate regex;
 
+pub mod css;
+#[cfg(feature = "html")]
 pub mod html;
 pub mod js;
 pub mod json;
-pub mod css;

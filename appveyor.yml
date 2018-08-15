@@ -22,5 +22,6 @@ build_script:
   - cargo build
   - cargo test
   - cargo doc
+  - cargo test --features "html"
 
 test: false
