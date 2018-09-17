@@ -10,6 +10,9 @@ readme = "README.md"
 keywords = ["minify", "minifier", "JS", "HTML", "CSS"]
 license = "MIT"
 
+[package.metadata.docs.rs]
+features = ["html"]
+
 [badges]
 appveyor = { repository = "GuillaumeGomez/minifier-rs", service = "github" }
 travis-ci = { repository = "GuillaumeGomez/minifier-rs" }
