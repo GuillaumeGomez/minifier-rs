@@ -127,6 +127,60 @@ impl ReservedChar {
         *self == ReservedChar::Tab ||
         *self == ReservedChar::Backline
     }
+
+    fn is_operator(&self) -> bool {
+        Operator::try_from(*self).is_ok()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Operator {
+    Plus,
+    Multiply,
+    Minus,
+    Modulo,
+    Divide,
+}
+
+impl fmt::Display for Operator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}",
+               match *self {
+                   Operator::Plus           => '+',
+                   Operator::Multiply       => '*',
+                   Operator::Minus          => '-',
+                   Operator::Modulo         => '%',
+                   Operator::Divide         => '/',
+               })
+    }
+}
+
+impl MyTryFrom<char> for Operator {
+    type Error = &'static str;
+
+    fn try_from(value: char) -> Result<Operator, Self::Error> {
+        match value {
+            '+' => Ok(Operator::Plus),
+            '*' => Ok(Operator::Multiply),
+            '-' => Ok(Operator::Minus),
+            '%' => Ok(Operator::Modulo),
+            '/' => Ok(Operator::Divide),
+            _   => Err("Unknown operator"),
+        }
+    }
+}
+
+impl MyTryFrom<ReservedChar> for Operator {
+    type Error = &'static str;
+
+    fn try_from(value: ReservedChar) -> Result<Operator, Self::Error> {
+        match value {
+            ReservedChar::Slash  => Ok(Operator::Divide),
+            ReservedChar::Star   => Ok(Operator::Multiply),
+            ReservedChar::Plus   => Ok(Operator::Plus),
+            _                    => Err("Unknown operator"),
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -223,6 +277,7 @@ pub enum Token<'a> {
     SelectorElement(SelectorElement<'a>),
     String(&'a str),
     SelectorOperator(SelectorOperator),
+    Operator(Operator),
 }
 
 impl<'a> fmt::Display for Token<'a> {
@@ -237,6 +292,7 @@ impl<'a> fmt::Display for Token<'a> {
             Token::SelectorElement(ref se) => write!(f, "{}", se),
             Token::String(s) => write!(f, "{}", s),
             Token::SelectorOperator(so) => write!(f, "{}", so),
+            Token::Operator(op) => write!(f, "{}", op),
         }
     }
 }
@@ -287,6 +343,14 @@ impl<'a> Token<'a> {
     fn is_a_license(&self) -> bool {
         match *self {
             Token::License(_) => true,
+            _ => false,
+        }
+    }
+
+    fn is_operator(&self) -> bool {
+        match *self {
+            Token::Operator(_) => true,
+            Token::Char(c) => c.is_operator(),
             _ => false,
         }
     }
@@ -492,9 +556,13 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
                 },
                 !v.last().unwrap_or(&Token::Char(ReservedChar::Space)).is_useless() &&
                 (!v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_char() ||
+                 v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_operator() ||
                  v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
                          .get_char() == Some(ReservedChar::CloseParenthese)) => {
                     v.push(Token::Char(ReservedChar::Space));
+                },
+                let Ok(op) = Operator::try_from(c) => {
+                    v.push(Token::Operator(op));
                 },
             }
             start = pos + 1;
@@ -505,14 +573,30 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
 
 fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
     let mut i = 0;
+    let mut is_in_calc = false;
+    let mut paren = 0;
 
     while i < v.len() {
+        if v[i] == Token::Other("calc") {
+            is_in_calc = true;
+        } else if is_in_calc == true {
+            if v[i] == Token::Char(ReservedChar::CloseParenthese) {
+                paren -= 1;
+                is_in_calc = paren != 0;
+            } else if v[i] == Token::Char(ReservedChar::OpenParenthese) {
+                paren += 1;
+            }
+        }
         if v[i].is_useless() {
-            if (i > 0 && ((v[i - 1].is_char() &&
+            if is_in_calc == false &&
+               ((i > 0 && ((v[i - 1].is_char() &&
                            v[i - 1] != Token::Char(ReservedChar::CloseParenthese)) ||
                           v[i - 1].is_a_media() ||
                           v[i - 1].is_a_license())) ||
-               (i < v.len() - 1 && v[i + 1].is_char()) {
+                (i < v.len() - 1 && v[i + 1].is_char())) {
+                v.remove(i);
+                continue
+            } else if is_in_calc == true && v[i - 1].is_useless() {
                 v.remove(i);
                 continue
             }

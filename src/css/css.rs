@@ -253,3 +253,14 @@ fn check_space_after_paren() {
     let expected = ".docblock:not(.type-decl) a:not(.srclink){}";
     assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
 }
+
+#[test]
+fn check_whitespaces_in_calc() {
+    let s = ".foo { width: calc(130px     + 10%); }";
+    let expected = ".foo{width:calc(130px + 10%);}";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+
+    let s = ".foo { width: calc(130px + (45% - 10% +   (12   *   2px))); }";
+    let expected = ".foo{width:calc(130px + (45% - 10% + (12 * 2px)));}";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+}
