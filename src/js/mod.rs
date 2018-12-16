@@ -23,5 +23,11 @@
 mod token;
 mod js;
 
-pub use self::js::{minify, minify_and_replace_keywords};
+pub use self::js::{
+    aggregate_strings,
+    clean_tokens,
+    minify,
+    minify_and_replace_keywords,
+    simple_minify,
+};
 pub use self::token::Keyword;

@@ -117,7 +117,7 @@ impl error::Error for CharsError {
             CharsError::Other(ref e) => Error::description(e),
         }
     }
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             CharsError::NotUtf8 => None,
             CharsError::Other(ref e) => e.cause(),
