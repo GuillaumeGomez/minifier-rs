@@ -20,7 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use js::token;
+use js::token::{self, Token, Tokens};
+
+use std::collections::{HashMap, HashSet};
 
 /*#[derive(Debug, Clone, PartialEq, Eq)]
 enum Elem<'a> {
@@ -200,15 +202,12 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 /// ```
 #[inline]
 pub fn minify(source: &str) -> String {
-    let mut v = token::tokenize(source);
-    token::clean_tokens(&mut v);
-    v.to_string()
+    token::tokenize(source).apply(clean_tokens).to_string()
     /*match build_ast(&v) {
         Ok(x) => {}
         Err(e) => eprintln!("Failure: {}", e),
     }*/
 }
-
 
 /// Minifies a given JS source code and to replace keywords.
 ///
@@ -229,7 +228,7 @@ pub fn minify(source: &str) -> String {
 ///         }
 ///     }"#.into();
 ///     let js_minified = minify_and_replace_keywords(js, &[(Keyword::Null, "N")]);
-///     println!("{}", js_minified);
+///     println!("{}", js_minified.to_string());
 /// }
 /// ```
 ///
@@ -240,10 +239,11 @@ pub fn minify(source: &str) -> String {
 /// var N = null;
 /// ```
 #[inline]
-pub fn minify_and_replace_keywords(source: &str,
-                                   keywords_to_replace: &[(token::Keyword, &str)]) -> String {
-    let mut v = token::tokenize(source);
-    token::clean_tokens(&mut v);
+pub fn minify_and_replace_keywords<'a>(
+    source: &'a str,
+    keywords_to_replace: &'a [(token::Keyword, &str)],
+) -> Tokens<'a> {
+    let mut v = token::tokenize(source).apply(clean_tokens);
     for &(keyword, replacement) in keywords_to_replace {
         for token in v.0.iter_mut() {
             if match token.get_keyword() {
@@ -254,7 +254,190 @@ pub fn minify_and_replace_keywords(source: &str,
             }
         }
     }
-    v.to_string()
+    v
+}
+
+struct VariableNameGenerator<'a> {
+    cur1: char,
+    cur2: char,
+    prepend: &'a str,
+}
+
+fn incr_letters(letters: &mut [&mut char]) {
+    let max = [('z', 'A'), ('Z', '0'), ('9', 'a')];
+
+    for (m, next) in &max {
+        if letters[0] == m {
+            *letters[0] = *next;
+            if *letters[0] == 'a' {
+                incr_letters(&mut letters[1..]);
+            }
+            return;
+        }
+    }
+    *letters[0] = ((*letters[0] as u8) + 1) as char;
+}
+
+impl<'a> VariableNameGenerator<'a> {
+    fn new(prepend: &'a str) -> VariableNameGenerator<'a> {
+        VariableNameGenerator {
+            cur1: 'a',
+            cur2: 'a',
+            prepend,
+        }
+    }
+
+    fn next(&mut self) {
+        incr_letters(&mut [&mut self.cur2, &mut self.cur1]);
+    }
+
+    fn to_string(&self) -> String {
+        format!("{}{}{}", self.prepend, self.cur1, self.cur2)
+    }
+}
+
+/// Aggregate litteral strings. For instance, if the string litteral "Oh look over there!"
+/// appears more than once, a variable will be created with this value and used everywhere the
+/// string appears. Of course, this replacement is only performed when it allows to take
+/// less space.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// extern crate minifier;
+/// use minifier::js::{aggregate_strings, clean_tokens, simple_minify};
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source);    // First we get the tokens list.
+///     let s = s.apply(clean_tokens)      // The first `apply` is used to remove useless chars.
+///              .apply(aggregate_strings) // This one aggregate string litterals.
+///              .to_string();             // And we finally convert to string.
+///     println!("result: {}", s);
+/// }
+/// ```
+#[inline]
+pub fn aggregate_strings<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
+    let mut new_vars = Vec::with_capacity(50);
+
+    for (var_name, positions) in {
+        let mut strs: HashMap<&Token, Vec<usize>> = HashMap::with_capacity(1000);
+        let mut validated: HashSet<&Token> = HashSet::with_capacity(100);
+
+        for (pos, token) in tokens.iter().enumerate() {
+            if token.is_string() {
+                let x = strs.entry(token).or_insert_with(|| Vec::with_capacity(1));
+                x.push(pos);
+                if x.len() > 1 {
+                    let len = token.get_string().unwrap().len();
+                    // Computation here is simple, we declare new variables when creating this so
+                    // the total of characters must be shorter than:
+                    // `var r_aa=...;` -> 10 + `r_aa` -> 14
+                    if x.len() * len > 10 + x.len() * 4 {
+                        validated.insert(token);
+                    }
+                }
+            }
+        }
+        let mut var_gen = VariableNameGenerator::new("r_");
+        let mut ret = Vec::with_capacity(validated.len());
+
+        // We need this macro to avoid having to sort the set when not testing the crate.
+        #[cfg(test)]
+        macro_rules! inner_loop {
+            ($x:ident) => {{
+                let mut $x = $x.into_iter().collect::<Vec<_>>();
+                $x.sort();
+                $x
+            }}
+        }
+        #[cfg(not(test))]
+        macro_rules! inner_loop {
+            ($x:ident) => {
+                $x.iter()
+            }
+        }
+
+        for v in inner_loop!(validated) {
+            let x = strs.remove(v).unwrap();
+            ret.push((var_gen.to_string(), x));
+            var_gen.next();
+        }
+        ret
+    } {
+        new_vars.push(Token::CreatedVar(format!("var {}={};", var_name, tokens[positions[0]])));
+        for pos in positions {
+            tokens.0[pos] = Token::CreatedVar(var_name.clone());
+        }
+    }
+    new_vars.append(&mut tokens.0);
+    Tokens(new_vars)
+}
+
+/// Simple function to get the untouched token list. Useful in case you want to perform some
+/// actions directly on it.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// extern crate minifier;
+/// use minifier::js::simple_minify;
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source);
+///     println!("result: {:?}", s); // We now have the tokens list.
+/// }
+/// ```
+#[inline]
+pub fn simple_minify<'a>(source: &'a str) -> Tokens<'a> {
+    token::tokenize(source)
+}
+
+/// Convenient function used to clean useless tokens in a token list.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// extern crate minifier;
+/// use minifier::js::{clean_tokens, simple_minify};
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source); // First we get the tokens list.
+///     let s = s.apply(clean_tokens);  // We now have a cleaned token list!
+///     println!("result: {:?}", s);
+/// }
+/// ```
+#[inline]
+pub fn clean_tokens<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
+    tokens.0.retain(|c| {
+        !c.is_comment() && {
+            if let Some(x) = c.get_char() {
+                !x.is_useless()
+            } else {
+                true
+            }
+        }
+    });
+    tokens
+}
+
+#[test]
+fn string_duplicates() {
+    let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
+                             "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var r_aa=\"a nice string\";var r_ab=\"cake!\";var x=[r_aa,r_aa,\
+                           \"another nice string\",r_ab,r_ab,r_aa,r_ab,r_ab,r_ab];";
+
+    let result = simple_minify(source).apply(clean_tokens).apply(aggregate_strings).to_string();
+    assert_eq!(result, expected_result);
 }
 
 #[test]
@@ -380,7 +563,7 @@ var x = ['a', 'b', null, 'd', {'x': null, 'e': null, 'z': 'w'}];
 var n = null;
 "#;
     let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
-    assert_eq!(minify_and_replace_keywords(source, &[(token::Keyword::Null, "N")]),
+    assert_eq!(minify_and_replace_keywords(source, &[(token::Keyword::Null, "N")]).to_string(),
                expected_result);
 }
 

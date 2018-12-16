@@ -29,7 +29,7 @@ pub trait MyTryFrom<T>: Sized {
     fn try_from(value: T) -> Result<Self, Self::Error>;
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum ReservedChar {
     Comma,
     OpenParenthese,
@@ -62,7 +62,7 @@ pub enum ReservedChar {
 }
 
 impl ReservedChar {
-    fn is_useless(&self) -> bool {
+    pub fn is_useless(&self) -> bool {
         *self == ReservedChar::Space ||
         *self == ReservedChar::Tab ||
         *self == ReservedChar::Backline
@@ -144,7 +144,7 @@ impl MyTryFrom<char> for ReservedChar {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Keyword {
     Break,
     Case,
@@ -263,7 +263,7 @@ impl<'a> MyTryFrom<&'a str> for Keyword {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum Condition {
     And,
     Or,
@@ -307,7 +307,7 @@ impl MyTryFrom<ReservedChar> for Condition {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum Operation {
     Addition,
     AdditionEqual,
@@ -357,7 +357,7 @@ impl MyTryFrom<ReservedChar> for Operation {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Token<'a> {
     Keyword(Keyword),
     Char(ReservedChar),
@@ -372,6 +372,7 @@ pub enum Token<'a> {
     },
     Condition(Condition),
     Operation(Operation),
+    CreatedVar(String),
 }
 
 impl<'a> fmt::Display for Token<'a> {
@@ -395,6 +396,7 @@ impl<'a> fmt::Display for Token<'a> {
             }
             Token::Condition(x) => write!(f, "{}", x),
             Token::Operation(x) => write!(f, "{}", x),
+            Token::CreatedVar(ref x) => write!(f, "{}", x),
         }
     }
 }
@@ -452,6 +454,20 @@ impl<'a> Token<'a> {
     pub fn get_keyword(&self) -> Option<Keyword> {
         match *self {
             Token::Keyword(k) => Some(k),
+            _ => None,
+        }
+    }
+
+    pub fn is_string(&self) -> bool {
+        match *self {
+            Token::String(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_string(&self) -> Option<&str> {
+        match *self {
+            Token::String(s) => Some(s),
             _ => None,
         }
     }
@@ -707,7 +723,7 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Tokens<'a>(pub Vec<Token<'a>>);
+pub struct Tokens<'a>(pub(crate) Vec<Token<'a>>);
 
 impl<'a> fmt::Display for Tokens<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -726,16 +742,19 @@ impl<'a> fmt::Display for Tokens<'a> {
     }
 }
 
-pub fn clean_tokens<'a>(tokens: &mut Tokens<'a>) {
-    tokens.0.retain(|c| {
-        !c.is_comment() && {
-            if let Some(x) = c.get_char() {
-                !x.is_useless()
-            } else {
-                true
-            }
-        }
-    });
+impl<'a> Tokens<'a> {
+    pub fn apply<F>(self, func: F) -> Tokens<'a>
+    where F: Fn(Tokens<'a>) -> Tokens<'a> {
+        func(self)
+    }
+}
+
+impl<'a> ::std::ops::Deref for Tokens<'a> {
+    type Target = Vec<Token<'a>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[test]
@@ -744,8 +763,7 @@ fn check_regex() {
     let expected_result = r#"var x=/"\.x/g;"#;
     assert_eq!(::js::minify(source), expected_result);
 
-    let mut v = tokenize(source);
-    clean_tokens(&mut v);
+    let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(v.0[3],
                Token::Regex {
                    regex: "\"\\.x",
@@ -757,8 +775,7 @@ fn check_regex() {
     let expected_result = r#"var x=/"\.x/gi;var x="hello";"#;
     assert_eq!(::js::minify(source), expected_result);
 
-    let mut v = tokenize(source);
-    clean_tokens(&mut v);
+    let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(v.0[3],
                Token::Regex {
                    regex: "\"\\.x",
@@ -773,8 +790,7 @@ fn more_regex() {
     let expected_result = r#"var x=/"\.x\/a/i;"#;
     assert_eq!(::js::minify(source), expected_result);
 
-    let mut v = tokenize(source);
-    clean_tokens(&mut v);
+    let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(v.0[3],
                Token::Regex {
                    regex: "\"\\.x\\/a",
@@ -786,8 +802,7 @@ fn more_regex() {
     let expected_result = r#"var x=/\\/i;"#;
     assert_eq!(::js::minify(source), expected_result);
 
-    let mut v = tokenize(source);
-    clean_tokens(&mut v);
+    let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(v.0[3],
                Token::Regex {
                    regex: "\\\\",
@@ -800,8 +815,7 @@ fn more_regex() {
 fn test_tokens_parsing() {
     let source = "true = == 2 === 3";
 
-    let mut v = tokenize(source);
-    clean_tokens(&mut v);
+    let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(&v.0,
                &[Token::Keyword(Keyword::True),
                  Token::Operation(Operation::Equal),
@@ -815,8 +829,7 @@ fn test_tokens_parsing() {
 fn test_string_parsing() {
     let source = "var x = 'hello people!'";
 
-    let mut v = tokenize(source);
-    clean_tokens(&mut v);
+    let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(&v.0,
                &[Token::Keyword(Keyword::Var),
                  Token::Other("x"),
