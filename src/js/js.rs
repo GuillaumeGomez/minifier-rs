@@ -22,7 +22,7 @@
 
 use js::token::{self, Token, Tokens};
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /*#[derive(Debug, Clone, PartialEq, Eq)]
 enum Elem<'a> {
@@ -258,41 +258,80 @@ pub fn minify_and_replace_keywords<'a>(
 }
 
 struct VariableNameGenerator<'a> {
-    cur1: char,
-    cur2: char,
-    prepend: &'a str,
-}
-
-fn incr_letters(letters: &mut [&mut char]) {
-    let max = [('z', 'A'), ('Z', '0'), ('9', 'a')];
-
-    for (m, next) in &max {
-        if letters[0] == m {
-            *letters[0] = *next;
-            if *letters[0] == 'a' {
-                incr_letters(&mut letters[1..]);
-            }
-            return;
-        }
-    }
-    *letters[0] = ((*letters[0] as u8) + 1) as char;
+    letter: char,
+    lower: Option<Box<VariableNameGenerator<'a>>>,
+    prepend: Option<&'a str>,
 }
 
 impl<'a> VariableNameGenerator<'a> {
-    fn new(prepend: &'a str) -> VariableNameGenerator<'a> {
-        VariableNameGenerator {
-            cur1: 'a',
-            cur2: 'a',
-            prepend,
+    fn new(prepend: Option<&'a str>, nb_letter: usize) -> VariableNameGenerator<'a> {
+        if nb_letter > 1 {
+            VariableNameGenerator {
+                letter: 'a',
+                lower: Some(Box::new(VariableNameGenerator::new(None, nb_letter - 1))),
+                prepend,
+            }
+        } else {
+            VariableNameGenerator {
+                letter: 'a',
+                lower: None,
+                prepend,
+            }
         }
     }
 
     fn next(&mut self) {
-        incr_letters(&mut [&mut self.cur2, &mut self.cur1]);
+        self.incr_letters();
     }
 
     fn to_string(&self) -> String {
-        format!("{}{}{}", self.prepend, self.cur1, self.cur2)
+        if let Some(ref lower) = self.lower {
+            format!("{}{}{}",
+                    match self.prepend {
+                        Some(ref p) => p,
+                        None => "",
+                    },
+                    self.letter,
+                    lower.to_string())
+        } else {
+            format!("{}{}",
+                    match self.prepend {
+                        Some(ref p) => p,
+                        None => "",
+                    },
+                    self.letter)
+        }
+    }
+
+    #[allow(dead_code)]
+    fn len(&self) -> usize {
+        let first = match self.prepend {
+            Some(ref s) => s.len(),
+            None => 0,
+        } + 1;
+        first + match self.lower {
+            Some(ref s) => s.len(),
+            None => 0,
+        }
+    }
+
+    fn incr_letters(&mut self) {
+        let max = [('z', 'A'), ('Z', '0'), ('9', 'a')];
+
+        for (m, next) in &max {
+            if self.letter == *m {
+                self.letter = *next;
+                if self.letter == 'a' {
+                    if let Some(ref mut lower) = self.lower {
+                        lower.incr_letters();
+                    } else {
+                        self.lower = Some(Box::new(VariableNameGenerator::new(None, 1)));
+                    }
+                }
+                return;
+            }
+        }
+        self.letter = ((self.letter as u8) + 1) as char;
     }
 }
 
@@ -324,24 +363,29 @@ pub fn aggregate_strings<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
 
     for (var_name, positions) in {
         let mut strs: HashMap<&Token, Vec<usize>> = HashMap::with_capacity(1000);
-        let mut validated: HashSet<&Token> = HashSet::with_capacity(100);
+        let mut validated: HashMap<&Token, String> = HashMap::with_capacity(100);
+
+        let mut var_gen = VariableNameGenerator::new(Some("r_"), 2);
+        let mut next_name = var_gen.to_string();
 
         for (pos, token) in tokens.iter().enumerate() {
             if token.is_string() {
                 let x = strs.entry(token).or_insert_with(|| Vec::with_capacity(1));
                 x.push(pos);
-                if x.len() > 1 {
-                    let len = token.get_string().unwrap().len();
+                let str_token = token.get_string().unwrap();
+                if x.len() > 1 && validated.get(token).is_none() {
+                    let len = str_token.len();
                     // Computation here is simple, we declare new variables when creating this so
                     // the total of characters must be shorter than:
                     // `var r_aa=...;` -> 10 + `r_aa` -> 14
-                    if x.len() * len > 10 + x.len() * 4 {
-                        validated.insert(token);
+                    if (x.len() + 2 /* quotes */) * len > next_name.len() + str_token.len() + 6 /* var _=_;*/ + x.len() * next_name.len() {
+                        validated.insert(token, next_name.clone());
+                        var_gen.next();
+                        next_name = var_gen.to_string();
                     }
                 }
             }
         }
-        let mut var_gen = VariableNameGenerator::new("r_");
         let mut ret = Vec::with_capacity(validated.len());
 
         // We need this macro to avoid having to sort the set when not testing the crate.
@@ -356,13 +400,12 @@ pub fn aggregate_strings<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
         #[cfg(not(test))]
         macro_rules! inner_loop {
             ($x:ident) => {
-                $x.iter()
+                $x.into_iter()
             }
         }
 
-        for v in inner_loop!(validated) {
-            let x = strs.remove(v).unwrap();
-            ret.push((var_gen.to_string(), x));
+        for (token, var_name) in inner_loop!(validated) {
+            ret.push((var_name, strs.remove(&token).unwrap()));
             var_gen.next();
         }
         ret
@@ -433,11 +476,34 @@ pub fn clean_tokens<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
 fn string_duplicates() {
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
-    let expected_result = "var r_aa=\"a nice string\";var r_ab=\"cake!\";var x=[r_aa,r_aa,\
-                           \"another nice string\",r_ab,r_ab,r_aa,r_ab,r_ab,r_ab];";
+    let expected_result = "var r_aa=\"a nice string\";var r_ba=\"cake!\";var x=[r_aa,r_aa,\
+                           \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
 
-    let result = simple_minify(source).apply(clean_tokens).apply(aggregate_strings).to_string();
+    let result = simple_minify(source).apply(clean_tokens)
+                                      .apply(aggregate_strings)
+                                      .to_string();
     assert_eq!(result, expected_result);
+}
+
+#[test]
+fn name_generator() {
+    let s = ::std::iter::repeat('a').take(36).collect::<String>();
+    // We need to generate enough long strings to reach the point that the name generator
+    // generates names with 3 characters.
+    let s = ::std::iter::repeat(s).take(20000)
+                                  .enumerate()
+                                  .map(|(pos, s)| format!("{}{}", s, pos))
+                                  .collect::<Vec<_>>();
+    let source = format!("var x = [{}];",
+                         s.iter()
+                          .map(|s| format!("\"{0}\",\"{0}\"", s))
+                          .collect::<Vec<_>>()
+                          .join(","));
+    let result = simple_minify(&source).apply(clean_tokens)
+                                       .apply(aggregate_strings)
+                                       .to_string();
+    assert!(result.find("var r_aaa=").is_some());
+    assert!(result.find("var r_ab=").unwrap() > result.find("var r_ba=").unwrap());
 }
 
 #[test]
