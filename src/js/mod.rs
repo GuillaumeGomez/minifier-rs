@@ -26,8 +26,16 @@ mod js;
 pub use self::js::{
     aggregate_strings,
     clean_tokens,
+    clean_tokens_except,
     minify,
     minify_and_replace_keywords,
     simple_minify,
 };
-pub use self::token::Keyword;
+pub use self::token::{
+    Condition,
+    Keyword,
+    Operation,
+    ReservedChar,
+    Token,
+    Tokens,
+};
