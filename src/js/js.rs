@@ -447,6 +447,7 @@ pub fn simple_minify<'a>(source: &'a str) -> Tokens<'a> {
 ///
 /// ```rust,no_run
 /// extern crate minifier;
+///
 /// use minifier::js::{clean_tokens, simple_minify};
 /// use std::fs;
 ///
@@ -472,6 +473,52 @@ pub fn clean_tokens<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
     tokens
 }
 
+/// Same as `clean_tokens` except that if a token is considered as not desired,
+/// the callback is called. If the callback returns `false` as well, it will
+/// be removed.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// extern crate minifier;
+///
+/// use minifier::js::{clean_tokens_except, simple_minify, ReservedChar};
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source); // First we get the tokens list.
+///     let s = s.apply(|f| {
+///         clean_tokens_except(f, |c| {
+///             c.get_char() != Some(ReservedChar::Backline)
+///         })
+///     });  // We now have a cleaned token list which kept backlines!
+///     println!("result: {:?}", s);
+/// }
+/// ```
+#[inline]
+pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
+    mut tokens: Tokens<'a>,
+    f: F
+) -> Tokens<'a> {
+    tokens.0.retain(|c| {
+        let res = !c.is_comment() && {
+            if let Some(x) = c.get_char() {
+                !x.is_useless()
+            } else {
+                true
+            }
+        };
+        if !res {
+            !f(c)
+        } else {
+            res
+        }
+    });
+    tokens
+}
+
 #[test]
 fn string_duplicates() {
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
@@ -483,6 +530,25 @@ fn string_duplicates() {
                                       .apply(aggregate_strings)
                                       .to_string();
     assert_eq!(result, expected_result);
+}
+
+#[test]
+fn clean_except() {
+    use self::token::ReservedChar;
+
+    let source = r#"var x = [1, 2, 3];
+var y = "salut";
+var z = "ok!";"#;
+    let expected = r#"var x=[1,2,3];
+var y="salut";
+var z="ok!";"#;
+
+    let result = simple_minify(source).apply(|f| {
+                     clean_tokens_except(f, |c| {
+                         c.get_char() != Some(ReservedChar::Backline)
+                     })
+                 }).to_string();
+    assert_eq!(result, expected);
 }
 
 #[test]
