@@ -181,7 +181,7 @@ pub enum Keyword {
 
 fn get_required<'a>(next: &Token<'a>) -> Option<char> {
     match *next {
-        Token::Keyword(_) | Token::Other(_) => Some(' '),
+        Token::Keyword(_) | Token::Other(_) | Token::CreatedVarDecl(_) => Some(' '),
         _ => None,
     }
 }
@@ -375,6 +375,7 @@ pub enum Token<'a> {
     },
     Condition(Condition),
     Operation(Operation),
+    CreatedVarDecl(String),
     CreatedVar(String),
 }
 
@@ -399,6 +400,7 @@ impl<'a> fmt::Display for Token<'a> {
             }
             Token::Condition(x) => write!(f, "{}", x),
             Token::Operation(x) => write!(f, "{}", x),
+            Token::CreatedVarDecl(ref x) => write!(f, "{}", x),
             Token::CreatedVar(ref x) => write!(f, "{}", x),
         }
     }
@@ -479,6 +481,27 @@ impl<'a> Token<'a> {
         match *self {
             Token::String(s) => Some(s),
             _ => None,
+        }
+    }
+
+    pub fn is_regex(&self) -> bool {
+        match *self {
+            Token::Regex { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_created_var_decl(&self) -> bool {
+        match *self {
+            Token::CreatedVarDecl(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_created_var(&self) -> bool {
+        match *self {
+            Token::CreatedVar(_) => true,
+            _ => false,
         }
     }
 }
@@ -733,7 +756,7 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Tokens<'a>(pub(crate) Vec<Token<'a>>);
+pub struct Tokens<'a>(pub Vec<Token<'a>>);
 
 impl<'a> fmt::Display for Tokens<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

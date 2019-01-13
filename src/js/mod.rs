@@ -22,6 +22,7 @@
 
 mod token;
 mod js;
+mod utils;
 
 pub use self::js::{
     aggregate_strings,
@@ -33,6 +34,7 @@ pub use self::js::{
     simple_minify,
 };
 pub use self::token::{
+    tokenize,
     Condition,
     Keyword,
     Operation,
@@ -40,3 +42,4 @@ pub use self::token::{
     Token,
     Tokens,
 };
+pub use self::utils::get_variable_name_and_value_positions;

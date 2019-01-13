@@ -20,7 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use js::token::{self, Keyword, Token, Tokens};
+use js::token::{self, Keyword, ReservedChar, Token, Tokens};
+use js::utils::{get_variable_name_and_value_positions, VariableNameGenerator};
 
 use std::collections::{HashMap, HashSet};
 
@@ -257,107 +258,32 @@ pub fn minify_and_replace_keywords<'a>(
     v
 }
 
-struct VariableNameGenerator<'a> {
-    letter: char,
-    lower: Option<Box<VariableNameGenerator<'a>>>,
-    prepend: Option<&'a str>,
-}
+// TODO: No scope handling or anything. Might be nice as a second step to add it...
+fn get_variables_name<'a>(
+    tokens: &'a Tokens<'a>,
+) -> (HashSet<&'a str>, HashMap<&'a str, (usize, usize)>) {
+    let mut ret = HashSet::new();
+    let mut variables = HashMap::new();
 
-impl<'a> VariableNameGenerator<'a> {
-    fn new(prepend: Option<&'a str>, nb_letter: usize) -> VariableNameGenerator<'a> {
-        if nb_letter > 1 {
-            VariableNameGenerator {
-                letter: 'a',
-                lower: Some(Box::new(VariableNameGenerator::new(None, nb_letter - 1))),
-                prepend,
-            }
-        } else {
-            VariableNameGenerator {
-                letter: 'a',
-                lower: None,
-                prepend,
-            }
-        }
-    }
-
-    fn next(&mut self) {
-        self.incr_letters();
-    }
-
-    fn to_string(&self) -> String {
-        if let Some(ref lower) = self.lower {
-            format!("{}{}{}",
-                    match self.prepend {
-                        Some(ref p) => p,
-                        None => "",
-                    },
-                    self.letter,
-                    lower.to_string())
-        } else {
-            format!("{}{}",
-                    match self.prepend {
-                        Some(ref p) => p,
-                        None => "",
-                    },
-                    self.letter)
-        }
-    }
-
-    #[allow(dead_code)]
-    fn len(&self) -> usize {
-        let first = match self.prepend {
-            Some(ref s) => s.len(),
-            None => 0,
-        } + 1;
-        first + match self.lower {
-            Some(ref s) => s.len(),
-            None => 0,
-        }
-    }
-
-    fn incr_letters(&mut self) {
-        let max = [('z', 'A'), ('Z', '0'), ('9', 'a')];
-
-        for (m, next) in &max {
-            if self.letter == *m {
-                self.letter = *next;
-                if self.letter == 'a' {
-                    if let Some(ref mut lower) = self.lower {
-                        lower.incr_letters();
-                    } else {
-                        self.lower = Some(Box::new(VariableNameGenerator::new(None, 1)));
+    for pos in 0..tokens.len() {
+        match tokens[pos].get_keyword() {
+            Some(Keyword::Let) | Some(Keyword::Var) => {
+                if let Some((var_pos, value_pos)) = get_variable_name_and_value_positions(tokens, pos) {
+                    if let Some(var_name) = tokens[var_pos].get_other() {
+                        if !var_name.starts_with("r_") {
+                            continue;
+                        }
+                        ret.insert(var_name);
+                    }
+                    if let Some(s) = tokens[value_pos].get_string() {
+                        variables.insert(s, (var_pos, value_pos));
                     }
                 }
-                return;
             }
-        }
-        self.letter = ((self.letter as u8) + 1) as char;
-    }
-}
-
-fn get_variables_name<'a>(tokens: &'a Tokens<'a>) -> HashSet<&'a str> {
-    let mut ret = HashSet::new();
-    let mut check_var_name = false;
-
-    for token in tokens.iter() {
-        if check_var_name {
-            match token.get_other() {
-                Some(s) => {
-                    ret.insert(s);
-                    check_var_name = false;
-                }
-                None => {}
-            }
-        } else {
-            match token.get_keyword() {
-                Some(Keyword::Let) | Some(Keyword::Var) => {
-                    check_var_name = true;
-                }
-                _ => {}
-            }
+            _ => {}
         }
     }
-    ret
+    (ret, variables)
 }
 
 #[inline]
@@ -366,6 +292,7 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
     separation_token: Option<Token<'b>>,
 ) -> Tokens<'a> {
     let mut new_vars = Vec::with_capacity(50);
+    let mut to_replace: Vec<(usize, usize)> = Vec::new();
 
     for (var_name, positions) in {
         let mut strs: HashMap<&Token, Vec<usize>> = HashMap::with_capacity(1000);
@@ -374,17 +301,23 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
         let mut var_gen = VariableNameGenerator::new(Some("r_"), 2);
         let mut next_name = var_gen.to_string();
 
-        let all_variables = get_variables_name(&tokens);
+        let (all_variables, values) = get_variables_name(&tokens);
         while all_variables.contains(&next_name.as_str()) {
             var_gen.next();
             next_name = var_gen.to_string();
         }
 
-        for (pos, token) in tokens.iter().enumerate() {
-            if token.is_string() {
+        for pos in 0..tokens.len() {
+            let token = &tokens[pos];
+            if let Some(str_token) = token.get_string() {
+                if let Some((var_pos, string_pos)) = values.get(&str_token) {
+                    if pos != *string_pos {
+                        to_replace.push((pos, *var_pos));
+                    }
+                    continue;
+                }
                 let x = strs.entry(token).or_insert_with(|| Vec::with_capacity(1));
                 x.push(pos);
-                let str_token = token.get_string().unwrap();
                 if x.len() > 1 && validated.get(token).is_none() {
                     let len = str_token.len();
                     // Computation here is simple, we declare new variables when creating this so
@@ -426,10 +359,21 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
         }
         ret
     } {
-        new_vars.push(Token::CreatedVar(format!("var {}={};", var_name, tokens[positions[0]])));
+        if new_vars.is_empty() {
+            new_vars.push(Token::Keyword(Keyword::Var));
+        } else {
+            new_vars.push(Token::Char(ReservedChar::Comma));
+        }
+        new_vars.push(Token::CreatedVarDecl(format!("{}={}", var_name, tokens[positions[0]])));
         for pos in positions {
             tokens.0[pos] = Token::CreatedVar(var_name.clone());
         }
+    }
+    if !new_vars.is_empty() {
+        new_vars.push(Token::Char(ReservedChar::SemiColon));
+    }
+    for (to_replace_pos, variable_pos) in to_replace {
+        tokens.0[to_replace_pos] = tokens.0[variable_pos].clone();
     }
     if let Some(token) = separation_token {
         new_vars.push(token);
@@ -608,7 +552,21 @@ pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
 fn string_duplicates() {
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
-    let expected_result = "var r_aa=\"a nice string\";var r_ba=\"cake!\";var x=[r_aa,r_aa,\
+    let expected_result = "var r_aa=\"a nice string\",r_ba=\"cake!\";var x=[r_aa,r_aa,\
+                           \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
+
+    let result = simple_minify(source).apply(aggregate_strings)
+                                      .apply(clean_tokens)
+                                      .to_string();
+    assert_eq!(result, expected_result);
+}
+
+#[test]
+fn already_existing_var() {
+    let source = r#"var r_aa = "a nice string"; var x = ["a nice string", "a nice string",
+                    "another nice string", "cake!",
+                    "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var r_ba=\"cake!\";var r_aa=\"a nice string\";var x=[r_aa,r_aa,\
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
 
     let result = simple_minify(source).apply(aggregate_strings)
@@ -621,7 +579,7 @@ fn string_duplicates() {
 fn string_duplicates_variables_already_exist() {
     let source = r#"var r_aa=1;var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
-    let expected_result = "var r_ba=\"a nice string\";var r_ca=\"cake!\";\
+    let expected_result = "var r_ba=\"a nice string\",r_ca=\"cake!\";\
                            var r_aa=1;var x=[r_ba,r_ba,\
                            \"another nice string\",r_ca,r_ca,r_ba,r_ca,r_ca,r_ca];";
 
@@ -637,7 +595,7 @@ fn string_duplicates_with_separator() {
 
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
-    let expected_result = "var r_aa=\"a nice string\";var r_ba=\"cake!\";\nvar x=[r_aa,r_aa,\
+    let expected_result = "var r_aa=\"a nice string\",r_ba=\"cake!\";\nvar x=[r_aa,r_aa,\
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
     let result = simple_minify(source).apply(clean_tokens)
                                       .apply(|f| {
@@ -682,8 +640,8 @@ fn name_generator() {
     let result = simple_minify(&source).apply(clean_tokens)
                                        .apply(aggregate_strings)
                                        .to_string();
-    assert!(result.find("var r_aaa=").is_some());
-    assert!(result.find("var r_ab=").unwrap() < result.find("var r_ba=").unwrap());
+    assert!(result.find(",r_aaa=").is_some());
+    assert!(result.find(",r_ab=").unwrap() < result.find(",r_ba=").unwrap());
 }
 
 #[test]
