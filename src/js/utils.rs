@@ -100,19 +100,77 @@ impl<'a> VariableNameGenerator<'a> {
     }
 }
 
+// TODO: The goal in here will be to be more glabl than the replace_keyword function.
+// For instance, replacing `""` with a unique character sounds way better.
+#[allow(dead_code)]
+#[inline]
+pub fn replace_with<'a>(/*mut */tokens: Tokens<'a>) -> Tokens<'a> {
+    tokens
+}
+
+/// When looping over `Tokens`, if you encounter `Keyword::Var`, `Keyword::Let` or
+/// `Token::Other` using this function will allow you to get the variable name's
+/// position and the variable value's position (if any).
+///
+/// ## Note
+///
+/// It'll return the value only if there is an `Operation::Equal` found.
+///
+/// # Examples
+///
+/// ```
+/// extern crate minifier;
+/// use minifier::js::{Keyword, get_variable_name_and_value_positions, simple_minify};
+///
+/// fn main() {
+///     let source = r#"var x = 1;var z;var y   =   "2";"#;
+///     let mut result = Vec::new();
+///
+///     let tokens = simple_minify(source);
+///
+///     for pos in 0..tokens.len() {
+///         match tokens[pos].get_keyword() {
+///             Some(k) if k == Keyword::Let || k == Keyword::Var => {
+///                 if let Some(x) = get_variable_name_and_value_positions(&tokens, pos) {
+///                     result.push(x);
+///                 }
+///             }
+///             _ => {}
+///         }
+///     }
+///     assert_eq!(result, vec![(2, Some(6)), (10, None), (14, Some(22))]);
+/// }
+/// ```
 #[inline]
 pub fn get_variable_name_and_value_positions<'a>(
     tokens: &'a Tokens<'a>,
     pos: usize,
-) -> Option<(usize, usize)> {
+) -> Option<(usize, Option<usize>)> {
     if pos >= tokens.len() {
         return None;
     }
-    match tokens[pos].get_keyword() {
-        Some(Keyword::Let) | Some(Keyword::Var) => {}
+    let mut tmp = pos;
+    match tokens[pos] {
+        Token::Keyword(Keyword::Let) |
+        Token::Keyword(Keyword::Var) => {
+            tmp += 1;
+        }
+        Token::Other(_) if pos > 0 => {
+            let mut pos = pos - 1;
+            while pos > 0 {
+                if tokens[pos].is_comment() || tokens[pos].is_white_character() {
+                    pos -= 1;
+                } else if tokens[pos] == Token::Char(ReservedChar::Comma) ||
+                          tokens[pos] == Token::Keyword(Keyword::Let) ||
+                          tokens[pos] == Token::Keyword(Keyword::Var) {
+                    break;
+                } else {
+                    return None;
+                }
+            }
+        }
         _ => return None,
     }
-    let mut tmp = pos + 1;
     while tmp < tokens.len() {
         if tokens[tmp].is_other() {
             let mut tmp2 = tmp + 1;
@@ -122,7 +180,7 @@ pub fn get_variable_name_and_value_positions<'a>(
                     while tmp2 < tokens.len() {
                         let token = &tokens[tmp2];
                         if token.is_string() || token.is_other() || token.is_regex() {
-                            return Some((tmp, tmp2));
+                            return Some((tmp, Some(tmp2)));
                         } else if !tokens[tmp2].is_comment() &&
                                   !tokens[tmp2].is_white_character() {
                             break;
@@ -130,6 +188,11 @@ pub fn get_variable_name_and_value_positions<'a>(
                         tmp2 += 1;
                     }
                     break;
+                } else if match tokens[tmp2].get_char() {
+                    Some(ReservedChar::Comma) | Some(ReservedChar::SemiColon) => true,
+                    _ => false,
+                } {
+                    return Some((tmp, None));
                 } else if !tokens[tmp2].is_comment() &&
                           !(tokens[tmp2].is_white_character() &&
                             tokens[tmp2].get_char() != Some(ReservedChar::Backline)) {
@@ -147,35 +210,31 @@ pub fn get_variable_name_and_value_positions<'a>(
 
 #[test]
 fn check_get_variable_name_and_value_positions() {
-    let source = r#"var x = 1;var y   =   "2";"#;
+    let source = r#"var x = 1;var y   =   "2",we=4;"#;
     let mut result = Vec::new();
+    let mut pos = 0;
 
     let tokens = ::js::token::tokenize(source);
 
-    for pos in 0..tokens.len() {
-        match tokens[pos].get_keyword() {
-            Some(k) if k == Keyword::Let || k == Keyword::Var => {
-                if let Some(x) = get_variable_name_and_value_positions(&tokens, pos) {
-                    result.push(x);
-                }
-            }
-            _ => {}
+    while pos < tokens.len() {
+        if let Some(x) = get_variable_name_and_value_positions(&tokens, pos) {
+            result.push(x);
+            pos = x.0;
         }
+        pos += 1;
     }
-    assert_eq!(result, vec![(2, 6), (10, 18)]);
+    assert_eq!(result, vec![(2, Some(6)), (10, Some(18)), (20, Some(22))]);
 
     let mut result = Vec::new();
     let tokens = ::js::clean_tokens(tokens);
+    pos = 0;
 
-    for pos in 0..tokens.len() {
-        match tokens[pos].get_keyword() {
-            Some(k) if k == Keyword::Let || k == Keyword::Var => {
-                if let Some(x) = get_variable_name_and_value_positions(&tokens, pos) {
-                    result.push(x);
-                }
-            }
-            _ => {}
+    while pos < tokens.len() {
+        if let Some(x) = get_variable_name_and_value_positions(&tokens, pos) {
+            result.push(x);
+            pos = x.0;
         }
+        pos += 1;
     }
-    assert_eq!(result, vec![(1, 3), (6, 8)]);
+    assert_eq!(result, vec![(1, Some(3)), (6, Some(8)), (10, Some(12))]);
 }

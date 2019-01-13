@@ -463,6 +463,13 @@ impl<'a> Token<'a> {
         }
     }
 
+    pub fn is_keyword(&self) -> bool {
+        match *self {
+            Token::Keyword(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn get_keyword(&self) -> Option<Keyword> {
         match *self {
             Token::Keyword(k) => Some(k),

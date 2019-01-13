@@ -244,7 +244,7 @@ pub fn minify_and_replace_keywords<'a>(
     source: &'a str,
     keywords_to_replace: &'a [(token::Keyword, &str)],
 ) -> Tokens<'a> {
-    let mut v = token::tokenize(source).apply(clean_tokens);
+    let mut v = token::tokenize(source);
     for &(keyword, replacement) in keywords_to_replace {
         for token in v.0.iter_mut() {
             if match token.get_keyword() {
@@ -264,24 +264,25 @@ fn get_variables_name<'a>(
 ) -> (HashSet<&'a str>, HashMap<&'a str, (usize, usize)>) {
     let mut ret = HashSet::new();
     let mut variables = HashMap::new();
+    let mut pos = 0;
 
-    for pos in 0..tokens.len() {
-        match tokens[pos].get_keyword() {
-            Some(Keyword::Let) | Some(Keyword::Var) => {
-                if let Some((var_pos, value_pos)) = get_variable_name_and_value_positions(tokens, pos) {
-                    if let Some(var_name) = tokens[var_pos].get_other() {
-                        if !var_name.starts_with("r_") {
-                            continue;
-                        }
-                        ret.insert(var_name);
+    while pos < tokens.len() {
+        if tokens[pos].is_keyword() || tokens[pos].is_other() {
+            if let Some((var_pos, Some(value_pos))) = get_variable_name_and_value_positions(tokens, pos) {
+                pos = value_pos;
+                if let Some(var_name) = tokens[var_pos].get_other() {
+                    if !var_name.starts_with("r_") {
+                        pos += 1;
+                        continue;
                     }
-                    if let Some(s) = tokens[value_pos].get_string() {
-                        variables.insert(s, (var_pos, value_pos));
-                    }
+                    ret.insert(var_name);
+                }
+                if let Some(s) = tokens[value_pos].get_string() {
+                    variables.insert(s, (var_pos, value_pos));
                 }
             }
-            _ => {}
         }
+        pos += 1;
     }
     (ret, variables)
 }
@@ -767,7 +768,7 @@ var x = ['a', 'b', null, 'd', {'x': null, 'e': null, 'z': 'w'}];
 var n = null;
 "#;
     let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
-    assert_eq!(minify_and_replace_keywords(source, &[(token::Keyword::Null, "N")]).to_string(),
+    assert_eq!(minify_and_replace_keywords(source, &[(token::Keyword::Null, "N")]).apply(clean_tokens).to_string(),
                expected_result);
 }
 
