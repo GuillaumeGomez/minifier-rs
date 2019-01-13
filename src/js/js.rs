@@ -203,59 +203,11 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 /// ```
 #[inline]
 pub fn minify(source: &str) -> String {
-    token::tokenize(source).apply(clean_tokens).to_string()
+    token::tokenize(source).apply(::js::clean_tokens).to_string()
     /*match build_ast(&v) {
         Ok(x) => {}
         Err(e) => eprintln!("Failure: {}", e),
     }*/
-}
-
-/// Minifies a given JS source code and to replace keywords.
-///
-/// # Example
-///
-/// ```rust
-/// extern crate minifier;
-/// use minifier::js::{Keyword, minify_and_replace_keywords};
-///
-/// fn main() {
-///     let js = r#"
-///         function replaceByNull(data, func) {
-///             for (var i = 0; i < data.length; ++i) {
-///                 if func(data[i]) {
-///                     data[i] = null;
-///                 }
-///             }
-///         }
-///     }"#.into();
-///     let js_minified = minify_and_replace_keywords(js, &[(Keyword::Null, "N")]);
-///     println!("{}", js_minified.to_string());
-/// }
-/// ```
-///
-/// The previous code will have all its `null` keywords replaced with `N`. In such cases,
-/// don't forget to include the definition of `N` in the returned minified javascript:
-///
-/// ```js
-/// var N = null;
-/// ```
-#[inline]
-pub fn minify_and_replace_keywords<'a>(
-    source: &'a str,
-    keywords_to_replace: &'a [(token::Keyword, &str)],
-) -> Tokens<'a> {
-    let mut v = token::tokenize(source);
-    for &(keyword, replacement) in keywords_to_replace {
-        for token in v.0.iter_mut() {
-            if match token.get_keyword() {
-                Some(ref k) => *k == keyword,
-                _ => false,
-            } {
-                *token = token::Token::Other(replacement);
-            }
-        }
-    }
-    v
 }
 
 // TODO: No scope handling or anything. Might be nice as a second step to add it...
@@ -471,84 +423,6 @@ pub fn simple_minify<'a>(source: &'a str) -> Tokens<'a> {
     token::tokenize(source)
 }
 
-/// Convenient function used to clean useless tokens in a token list.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// extern crate minifier;
-///
-/// use minifier::js::{clean_tokens, simple_minify};
-/// use std::fs;
-///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source); // First we get the tokens list.
-///     let s = s.apply(clean_tokens);  // We now have a cleaned token list!
-///     println!("result: {:?}", s);
-/// }
-/// ```
-#[inline]
-pub fn clean_tokens<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
-    tokens.0.retain(|c| {
-        !c.is_comment() && {
-            if let Some(x) = c.get_char() {
-                !x.is_useless()
-            } else {
-                true
-            }
-        }
-    });
-    tokens
-}
-
-/// Same as `clean_tokens` except that if a token is considered as not desired,
-/// the callback is called. If the callback returns `false` as well, it will
-/// be removed.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// extern crate minifier;
-///
-/// use minifier::js::{clean_tokens_except, simple_minify, ReservedChar};
-/// use std::fs;
-///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source); // First we get the tokens list.
-///     let s = s.apply(|f| {
-///         clean_tokens_except(f, |c| {
-///             c.get_char() != Some(ReservedChar::Backline)
-///         })
-///     });  // We now have a cleaned token list which kept backlines!
-///     println!("result: {:?}", s);
-/// }
-/// ```
-#[inline]
-pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
-    mut tokens: Tokens<'a>,
-    f: F
-) -> Tokens<'a> {
-    tokens.0.retain(|c| {
-        let res = !c.is_comment() && {
-            if let Some(x) = c.get_char() {
-                !x.is_useless()
-            } else {
-                true
-            }
-        };
-        if !res {
-            !f(c)
-        } else {
-            res
-        }
-    });
-    tokens
-}
-
 #[test]
 fn string_duplicates() {
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
@@ -557,7 +431,7 @@ fn string_duplicates() {
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
 
     let result = simple_minify(source).apply(aggregate_strings)
-                                      .apply(clean_tokens)
+                                      .apply(::js::clean_tokens)
                                       .to_string();
     assert_eq!(result, expected_result);
 }
@@ -571,7 +445,7 @@ fn already_existing_var() {
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
 
     let result = simple_minify(source).apply(aggregate_strings)
-                                      .apply(clean_tokens)
+                                      .apply(::js::clean_tokens)
                                       .to_string();
     assert_eq!(result, expected_result);
 }
@@ -585,7 +459,7 @@ fn string_duplicates_variables_already_exist() {
                            \"another nice string\",r_ca,r_ca,r_ba,r_ca,r_ca,r_ca];";
 
     let result = simple_minify(source).apply(aggregate_strings)
-                                      .apply(clean_tokens)
+                                      .apply(::js::clean_tokens)
                                       .to_string();
     assert_eq!(result, expected_result);
 }
@@ -598,7 +472,7 @@ fn string_duplicates_with_separator() {
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var r_aa=\"a nice string\",r_ba=\"cake!\";\nvar x=[r_aa,r_aa,\
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
-    let result = simple_minify(source).apply(clean_tokens)
+    let result = simple_minify(source).apply(::js::clean_tokens)
                                       .apply(|f| {
                      aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline))
                  }).to_string();
@@ -617,7 +491,7 @@ var y="salut";
 var z="ok!";"#;
 
     let result = simple_minify(source).apply(|f| {
-                     clean_tokens_except(f, |c| {
+                     ::js::clean_tokens_except(f, |c| {
                          c.get_char() != Some(ReservedChar::Backline)
                      })
                  }).to_string();
@@ -638,7 +512,7 @@ fn name_generator() {
                           .map(|s| format!("\"{0}\",\"{0}\"", s))
                           .collect::<Vec<_>>()
                           .join(","));
-    let result = simple_minify(&source).apply(clean_tokens)
+    let result = simple_minify(&source).apply(::js::clean_tokens)
                                        .apply(aggregate_strings)
                                        .to_string();
     assert!(result.find(",r_aaa=").is_some());
@@ -759,17 +633,6 @@ val = val.replace(/\_/g, "");
 var valGenerics = extractGenerics(val);"#;
     let expected_result = "val=val.replace(/\\_/g,\"\");var valGenerics=extractGenerics(val);";
     assert_eq!(minify(source), expected_result);
-}
-
-#[test]
-fn replace_keyword() {
-    let source = r#"
-var x = ['a', 'b', null, 'd', {'x': null, 'e': null, 'z': 'w'}];
-var n = null;
-"#;
-    let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
-    assert_eq!(minify_and_replace_keywords(source, &[(token::Keyword::Null, "N")]).apply(clean_tokens).to_string(),
-               expected_result);
 }
 
 // TODO: requires AST to fix this issue!

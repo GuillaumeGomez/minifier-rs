@@ -27,10 +27,7 @@ mod utils;
 pub use self::js::{
     aggregate_strings,
     aggregate_strings_with_separation,
-    clean_tokens,
-    clean_tokens_except,
     minify,
-    minify_and_replace_keywords,
     simple_minify,
 };
 pub use self::token::{
@@ -42,4 +39,9 @@ pub use self::token::{
     Token,
     Tokens,
 };
-pub use self::utils::get_variable_name_and_value_positions;
+pub use self::utils::{
+    clean_tokens,
+    clean_tokens_except,
+    get_variable_name_and_value_positions,
+    replace_token_with,
+};

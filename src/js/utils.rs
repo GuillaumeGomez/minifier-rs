@@ -100,11 +100,54 @@ impl<'a> VariableNameGenerator<'a> {
     }
 }
 
-// TODO: The goal in here will be to be more glabl than the replace_keyword function.
-// For instance, replacing `""` with a unique character sounds way better.
-#[allow(dead_code)]
+/// Minifies a given JS source code and to replace keywords.
+///
+/// # Example
+///
+/// ```rust
+/// extern crate minifier;
+/// use minifier::js::{Keyword, Token, replace_token_with, simple_minify};
+///
+/// fn main() {
+///     let js = r#"
+///         function replaceByNull(data, func) {
+///             for (var i = 0; i < data.length; ++i) {
+///                 if func(data[i]) {
+///                     data[i] = null;
+///                 }
+///             }
+///         }
+///     }"#.into();
+///     let js_minified = simple_minify(js)
+///         .apply(|f| {
+///             replace_token_with(f, |t| {
+///                 if *t == Token::Keyword(Keyword::Null) {
+///                     Some(Token::Other("N"))
+///                 } else {
+///                     None
+///                 }
+///             })
+///         });
+///     println!("{}", js_minified.to_string());
+/// }
+/// ```
+///
+/// The previous code will have all its `null` keywords replaced with `N`. In such cases,
+/// don't forget to include the definition of `N` in the returned minified javascript:
+///
+/// ```js
+/// var N = null;
+/// ```
 #[inline]
-pub fn replace_with<'a>(/*mut */tokens: Tokens<'a>) -> Tokens<'a> {
+pub fn replace_token_with<'a, 'b: 'a, F: Fn(&Token<'a>) -> Option<Token<'b>>>(
+    mut tokens: Tokens<'a>,
+    callback: F,
+) -> Tokens<'a> {
+    for token in tokens.0.iter_mut() {
+        if let Some(t) = callback(token) {
+            *token = t;
+        }
+    }
     tokens
 }
 
@@ -208,6 +251,84 @@ pub fn get_variable_name_and_value_positions<'a>(
     None
 }
 
+/// Convenient function used to clean useless tokens in a token list.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// extern crate minifier;
+///
+/// use minifier::js::{clean_tokens, simple_minify};
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source); // First we get the tokens list.
+///     let s = s.apply(clean_tokens);  // We now have a cleaned token list!
+///     println!("result: {:?}", s);
+/// }
+/// ```
+#[inline]
+pub fn clean_tokens<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
+    tokens.0.retain(|c| {
+        !c.is_comment() && {
+            if let Some(x) = c.get_char() {
+                !x.is_useless()
+            } else {
+                true
+            }
+        }
+    });
+    tokens
+}
+
+/// Same as `clean_tokens` except that if a token is considered as not desired,
+/// the callback is called. If the callback returns `false` as well, it will
+/// be removed.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// extern crate minifier;
+///
+/// use minifier::js::{clean_tokens_except, simple_minify, ReservedChar};
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source); // First we get the tokens list.
+///     let s = s.apply(|f| {
+///         clean_tokens_except(f, |c| {
+///             c.get_char() != Some(ReservedChar::Backline)
+///         })
+///     });  // We now have a cleaned token list which kept backlines!
+///     println!("result: {:?}", s);
+/// }
+/// ```
+#[inline]
+pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
+    mut tokens: Tokens<'a>,
+    f: F
+) -> Tokens<'a> {
+    tokens.0.retain(|c| {
+        let res = !c.is_comment() && {
+            if let Some(x) = c.get_char() {
+                !x.is_useless()
+            } else {
+                true
+            }
+        };
+        if !res {
+            !f(c)
+        } else {
+            res
+        }
+    });
+    tokens
+}
+
 #[test]
 fn check_get_variable_name_and_value_positions() {
     let source = r#"var x = 1;var y   =   "2",we=4;"#;
@@ -237,4 +358,26 @@ fn check_get_variable_name_and_value_positions() {
         pos += 1;
     }
     assert_eq!(result, vec![(1, Some(3)), (6, Some(8)), (10, Some(12))]);
+}
+
+#[test]
+fn replace_tokens() {
+    let source = r#"
+var x = ['a', 'b', null, 'd', {'x': null, 'e': null, 'z': 'w'}];
+var n = null;
+"#;
+    let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
+
+    let res = ::js::simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|f| {
+            replace_token_with(f, |t| {
+                if *t == Token::Keyword(Keyword::Null) {
+                    Some(Token::Other("N"))
+                } else {
+                    None
+                }
+            })
+        });
+    assert_eq!(res.to_string(), expected_result);
 }
