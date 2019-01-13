@@ -20,9 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use js::token::{self, Token, Tokens};
+use js::token::{self, Keyword, Token, Tokens};
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /*#[derive(Debug, Clone, PartialEq, Eq)]
 enum Elem<'a> {
@@ -335,6 +335,31 @@ impl<'a> VariableNameGenerator<'a> {
     }
 }
 
+fn get_variables_name<'a>(tokens: &'a Tokens<'a>) -> HashSet<&'a str> {
+    let mut ret = HashSet::new();
+    let mut check_var_name = false;
+
+    for token in tokens.iter() {
+        if check_var_name {
+            match token.get_other() {
+                Some(s) => {
+                    ret.insert(s);
+                    check_var_name = false;
+                }
+                None => {}
+            }
+        } else {
+            match token.get_keyword() {
+                Some(Keyword::Let) | Some(Keyword::Var) => {
+                    check_var_name = true;
+                }
+                _ => {}
+            }
+        }
+    }
+    ret
+}
+
 #[inline]
 fn aggregate_strings_inner<'a, 'b: 'a>(
     mut tokens: Tokens<'a>,
@@ -348,6 +373,12 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
 
         let mut var_gen = VariableNameGenerator::new(Some("r_"), 2);
         let mut next_name = var_gen.to_string();
+
+        let all_variables = get_variables_name(&tokens);
+        while all_variables.contains(&next_name.as_str()) {
+            var_gen.next();
+            next_name = var_gen.to_string();
+        }
 
         for (pos, token) in tokens.iter().enumerate() {
             if token.is_string() {
@@ -363,6 +394,10 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
                         validated.insert(token, next_name.clone());
                         var_gen.next();
                         next_name = var_gen.to_string();
+                        while all_variables.contains(&next_name.as_str()) {
+                            var_gen.next();
+                            next_name = var_gen.to_string();
+                        }
                     }
                 }
             }
@@ -374,7 +409,7 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
         macro_rules! inner_loop {
             ($x:ident) => {{
                 let mut $x = $x.into_iter().collect::<Vec<_>>();
-                $x.sort();
+                $x.sort_unstable_by(|a, b| a.1.cmp(&b.1));
                 $x
             }}
         }
@@ -583,6 +618,20 @@ fn string_duplicates() {
 }
 
 #[test]
+fn string_duplicates_variables_already_exist() {
+    let source = r#"var r_aa=1;var x = ["a nice string", "a nice string", "another nice string", "cake!",
+                             "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var r_ba=\"a nice string\";var r_ca=\"cake!\";\
+                           var r_aa=1;var x=[r_ba,r_ba,\
+                           \"another nice string\",r_ca,r_ca,r_ba,r_ca,r_ca,r_ca];";
+
+    let result = simple_minify(source).apply(aggregate_strings)
+                                      .apply(clean_tokens)
+                                      .to_string();
+    assert_eq!(result, expected_result);
+}
+
+#[test]
 fn string_duplicates_with_separator() {
     use self::token::ReservedChar;
 
@@ -634,7 +683,7 @@ fn name_generator() {
                                        .apply(aggregate_strings)
                                        .to_string();
     assert!(result.find("var r_aaa=").is_some());
-    assert!(result.find("var r_ab=").unwrap() > result.find("var r_ba=").unwrap());
+    assert!(result.find("var r_ab=").unwrap() < result.find("var r_ba=").unwrap());
 }
 
 #[test]
