@@ -161,6 +161,7 @@ pub enum Keyword {
     If,
     In,
     InstanceOf,
+    Let,
     New,
     Null,
     Private,
@@ -204,6 +205,7 @@ impl fmt::Display for Keyword {
                    Keyword::If => "if",
                    Keyword::In => "in",
                    Keyword::InstanceOf => "instanceof",
+                   Keyword::Let => "let",
                    Keyword::New => "new",
                    Keyword::Null => "null",
                    Keyword::Private => "private",
@@ -243,6 +245,7 @@ impl<'a> MyTryFrom<&'a str> for Keyword {
             "if" => Ok(Keyword::If),
             "in" => Ok(Keyword::In),
             "instanceof" => Ok(Keyword::InstanceOf),
+            "let" => Ok(Keyword::Let),
             "new" => Ok(Keyword::New),
             "null" => Ok(Keyword::Null),
             "private" => Ok(Keyword::Private),
@@ -441,6 +444,13 @@ impl<'a> Token<'a> {
         match *self {
             Token::Other(_) => true,
             _ => false,
+        }
+    }
+
+    pub fn get_other(&self) -> Option<&str> {
+        match *self {
+            Token::Other(s) => Some(s),
+            _ => None,
         }
     }
 
