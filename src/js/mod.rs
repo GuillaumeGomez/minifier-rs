@@ -25,6 +25,7 @@ mod js;
 
 pub use self::js::{
     aggregate_strings,
+    aggregate_strings_with_separation,
     clean_tokens,
     clean_tokens_except,
     minify,

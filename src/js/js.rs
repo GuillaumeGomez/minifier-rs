@@ -335,30 +335,11 @@ impl<'a> VariableNameGenerator<'a> {
     }
 }
 
-/// Aggregate litteral strings. For instance, if the string litteral "Oh look over there!"
-/// appears more than once, a variable will be created with this value and used everywhere the
-/// string appears. Of course, this replacement is only performed when it allows to take
-/// less space.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// extern crate minifier;
-/// use minifier::js::{aggregate_strings, clean_tokens, simple_minify};
-/// use std::fs;
-///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source);    // First we get the tokens list.
-///     let s = s.apply(clean_tokens)      // The first `apply` is used to remove useless chars.
-///              .apply(aggregate_strings) // This one aggregate string litterals.
-///              .to_string();             // And we finally convert to string.
-///     println!("result: {}", s);
-/// }
-/// ```
 #[inline]
-pub fn aggregate_strings<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
+fn aggregate_strings_inner<'a, 'b: 'a>(
+    mut tokens: Tokens<'a>,
+    separation_token: Option<Token<'b>>,
+) -> Tokens<'a> {
     let mut new_vars = Vec::with_capacity(50);
 
     for (var_name, positions) in {
@@ -389,7 +370,7 @@ pub fn aggregate_strings<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
         let mut ret = Vec::with_capacity(validated.len());
 
         // We need this macro to avoid having to sort the set when not testing the crate.
-        #[cfg(test)]
+        //#[cfg(test)]
         macro_rules! inner_loop {
             ($x:ident) => {{
                 let mut $x = $x.into_iter().collect::<Vec<_>>();
@@ -397,12 +378,12 @@ pub fn aggregate_strings<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
                 $x
             }}
         }
-        #[cfg(not(test))]
+        /*#[cfg(not(test))]
         macro_rules! inner_loop {
             ($x:ident) => {
                 $x.into_iter()
             }
-        }
+        }*/
 
         for (token, var_name) in inner_loop!(validated) {
             ret.push((var_name, strs.remove(&token).unwrap()));
@@ -415,8 +396,77 @@ pub fn aggregate_strings<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
             tokens.0[pos] = Token::CreatedVar(var_name.clone());
         }
     }
+    if let Some(token) = separation_token {
+        new_vars.push(token);
+    }
     new_vars.append(&mut tokens.0);
     Tokens(new_vars)
+}
+
+/// Aggregate litteral strings. For instance, if the string litteral "Oh look over there!"
+/// appears more than once, a variable will be created with this value and used everywhere the
+/// string appears. Of course, this replacement is only performed when it allows to take
+/// less space.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// extern crate minifier;
+/// use minifier::js::{aggregate_strings, clean_tokens, simple_minify};
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source);    // First we get the tokens list.
+///     let s = s.apply(aggregate_strings) // This `apply` aggregates string litterals.
+///              .apply(clean_tokens)      // This one is used to remove useless chars.
+///              .to_string();             // And we finally convert to string.
+///     println!("result: {}", s);
+/// }
+/// ```
+#[inline]
+pub fn aggregate_strings<'a>(tokens: Tokens<'a>) -> Tokens<'a> {
+    aggregate_strings_inner(tokens, None)
+}
+
+/// Exactly like `aggregate_strings` except this one expects a separation token
+/// to be passed. This token will be placed between the created variables for the
+/// strings aggregation and the rest.
+///
+/// # Example
+///
+/// Let's add a backline between the created variables and the rest of the code:
+///
+/// ```rust,no_run
+/// extern crate minifier;
+/// use minifier::js::{
+///     aggregate_strings_with_separation,
+///     clean_tokens,
+///     simple_minify,
+///     Token,
+///     ReservedChar,
+/// };
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source);    // First we get the tokens list.
+///     let s = s.apply(|f| {
+///                  aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline))
+///              })                   // We add a backline between the variable and the rest.
+///              .apply(clean_tokens) // We clean the tokens.
+///              .to_string();        // And we finally convert to string.
+///     println!("result: {}", s);
+/// }
+/// ```
+#[inline]
+pub fn aggregate_strings_with_separation<'a, 'b: 'a>(
+    tokens: Tokens<'a>,
+    separation_token: Token<'b>,
+) -> Tokens<'a> {
+    aggregate_strings_inner(tokens, Some(separation_token))
 }
 
 /// Simple function to get the untouched token list. Useful in case you want to perform some
@@ -526,9 +576,24 @@ fn string_duplicates() {
     let expected_result = "var r_aa=\"a nice string\";var r_ba=\"cake!\";var x=[r_aa,r_aa,\
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
 
-    let result = simple_minify(source).apply(clean_tokens)
-                                      .apply(aggregate_strings)
+    let result = simple_minify(source).apply(aggregate_strings)
+                                      .apply(clean_tokens)
                                       .to_string();
+    assert_eq!(result, expected_result);
+}
+
+#[test]
+fn string_duplicates_with_separator() {
+    use self::token::ReservedChar;
+
+    let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
+                             "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var r_aa=\"a nice string\";var r_ba=\"cake!\";\nvar x=[r_aa,r_aa,\
+                           \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
+    let result = simple_minify(source).apply(clean_tokens)
+                                      .apply(|f| {
+                     aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline))
+                 }).to_string();
     assert_eq!(result, expected_result);
 }
 
