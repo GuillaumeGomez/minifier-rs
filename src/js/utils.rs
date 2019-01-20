@@ -222,7 +222,8 @@ pub fn get_variable_name_and_value_positions<'a>(
                     tmp2 += 1;
                     while tmp2 < tokens.len() {
                         let token = &tokens[tmp2];
-                        if token.is_string() || token.is_other() || token.is_regex() {
+                        if token.is_string() || token.is_other() || token.is_regex() ||
+                           token.is_number() || token.is_floating_number() {
                             return Some((tmp, Some(tmp2)));
                         } else if !tokens[tmp2].is_comment() &&
                                   !tokens[tmp2].is_white_character() {
@@ -327,6 +328,74 @@ pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
         }
     });
     tokens
+}
+
+#[inline]
+pub(crate) fn get_array<'a>(
+    tokens: &'a Tokens<'a>,
+    array_name: &str,
+) -> Option<Vec<&'a Token<'a>>> {
+    let mut ret = Vec::new();
+
+    let mut looking_for_var = false;
+    let mut looking_for_equal = false;
+    let mut looking_for_array_start = false;
+    let mut getting_values = false;
+
+    for pos in 0..tokens.len() {
+        if looking_for_var {
+            match tokens[pos] {
+                Token::Other(s) => {
+                    looking_for_var = false;
+                    if s == array_name {
+                        looking_for_equal = true;
+                    }
+                }
+                ref s => {
+                    looking_for_var = s.is_comment() || s.is_white_character();
+                }
+            }
+        } else if looking_for_equal {
+            match tokens[pos] {
+                Token::Operation(Operation::Equal) => {
+                    looking_for_equal = false;
+                    looking_for_array_start = true;
+                }
+                ref s => {
+                    looking_for_equal = s.is_comment() || s.is_white_character();
+                }
+            }
+        } else if looking_for_array_start {
+            match tokens[pos] {
+                Token::Char(ReservedChar::OpenBracket) => {
+                    looking_for_array_start = false;
+                    getting_values = true;
+                }
+                ref s => {
+                    looking_for_array_start = s.is_comment() || s.is_white_character();
+                }
+            }
+        } else if getting_values {
+            match &tokens[pos] {
+                Token::Char(ReservedChar::CloseBracket) => {
+                    return Some(ret);
+                }
+                s if s.is_comment() || s.is_white_character() => {}
+                s => {
+                    ret.push(s);
+                }
+            }
+        } else {
+            match tokens[pos] {
+                Token::Keyword(Keyword::Let) |
+                Token::Keyword(Keyword::Var) => {
+                    looking_for_var = true;
+                }
+                _ => {}
+            }
+        }
+    }
+    None
 }
 
 #[test]

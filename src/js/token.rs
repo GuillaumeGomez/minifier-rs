@@ -22,7 +22,7 @@
 
 use std::fmt;
 use std::iter::Peekable;
-use std::str::CharIndices;
+use std::str::{CharIndices, FromStr};
 
 pub trait MyTryFrom<T>: Sized {
     type Error;
@@ -360,7 +360,7 @@ impl MyTryFrom<ReservedChar> for Operation {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Hash)]
 pub enum Token<'a> {
     Keyword(Keyword),
     Char(ReservedChar),
@@ -377,6 +377,8 @@ pub enum Token<'a> {
     Operation(Operation),
     CreatedVarDecl(String),
     CreatedVar(String),
+    Number(usize),
+    FloatingNumber(&'a str),
 }
 
 impl<'a> fmt::Display for Token<'a> {
@@ -402,6 +404,8 @@ impl<'a> fmt::Display for Token<'a> {
             Token::Operation(x) => write!(f, "{}", x),
             Token::CreatedVarDecl(ref x) => write!(f, "{}", x),
             Token::CreatedVar(ref x) => write!(f, "{}", x),
+            Token::Number(x) => write!(f, "{}", x),
+            Token::FloatingNumber(ref x) => write!(f, "{}", x),
         }
     }
 }
@@ -508,6 +512,20 @@ impl<'a> Token<'a> {
     pub fn is_created_var(&self) -> bool {
         match *self {
             Token::CreatedVar(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_number(&self) -> bool {
+        match *self {
+            Token::Number(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_floating_number(&self) -> bool {
+        match *self {
+            Token::FloatingNumber(_) => true,
             _ => false,
         }
     }
@@ -630,6 +648,10 @@ fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: us
     if start < pos {
         if let Ok(w) = Keyword::try_from(&source[start..pos]) {
             v.push(Token::Keyword(w));
+        } else if let Ok(n) = usize::from_str(&source[start..pos]) {
+            v.push(Token::Number(n))
+        } else if f64::from_str(&source[start..pos]).is_ok() {
+            v.push(Token::FloatingNumber(&source[start..pos]))
         } else {
             v.push(Token::Other(&source[start..pos]));
         }
@@ -692,6 +714,22 @@ fn handle_equal_sign(v: &mut Vec<Token>, c: ReservedChar) -> bool {
     true
 }
 
+fn check_if_number<'a>(
+    iterator: &mut Peekable<CharIndices>,
+    start: usize,
+    pos: usize,
+    source: &'a str,
+) -> bool {
+    if source[start..pos].find('.').is_some() {
+        return false;
+    } else if u64::from_str(&source[start..pos]).is_ok() {
+        return true;
+    } else if let Some((_, x)) = iterator.peek() {
+        return *x as u8 >= b'0' && *x as u8 <= b'9';
+    }
+    false
+}
+
 pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
     let mut v = Vec::with_capacity(1000);
     let mut start = 0;
@@ -706,6 +744,9 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
             }
         };
         if let Ok(c) = ReservedChar::try_from(c) {
+            if c == ReservedChar::Dot && check_if_number(&mut iterator, start, pos, source) {
+                continue
+            }
             fill_other(source, &mut v, start, pos);
             if_match! {
                 c == ReservedChar::Quote || c == ReservedChar::DoubleQuote =>
@@ -853,16 +894,16 @@ fn more_regex() {
 
 #[test]
 fn test_tokens_parsing() {
-    let source = "true = == 2 === 3";
+    let source = "true = == 2.3 === 32";
 
     let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(&v.0,
                &[Token::Keyword(Keyword::True),
                  Token::Operation(Operation::Equal),
                  Token::Condition(Condition::EqualTo),
-                 Token::Other("2"),
+                 Token::FloatingNumber("2.3"),
                  Token::Condition(Condition::SuperEqualTo),
-                 Token::Other("3")]);
+                 Token::Number(32)]);
 }
 
 #[test]
@@ -875,4 +916,34 @@ fn test_string_parsing() {
                  Token::Other("x"),
                  Token::Operation(Operation::Equal),
                  Token::String("\'hello people!\'")]);
+}
+
+#[test]
+fn test_number_parsing() {
+    let source = "var x = .12; let y = 4.; var z = 12; .3 4. 'a' let u = 12.2";
+
+    let v = tokenize(source).apply(::js::clean_tokens);
+    assert_eq!(&v.0,
+               &[Token::Keyword(Keyword::Var),
+                 Token::Other("x"),
+                 Token::Operation(Operation::Equal),
+                 Token::FloatingNumber(".12"),
+                 Token::Char(ReservedChar::SemiColon),
+                 Token::Keyword(Keyword::Let),
+                 Token::Other("y"),
+                 Token::Operation(Operation::Equal),
+                 Token::FloatingNumber("4."),
+                 Token::Char(ReservedChar::SemiColon),
+                 Token::Keyword(Keyword::Var),
+                 Token::Other("z"),
+                 Token::Operation(Operation::Equal),
+                 Token::Number(12),
+                 Token::Char(ReservedChar::SemiColon),
+                 Token::FloatingNumber(".3"),
+                 Token::FloatingNumber("4."),
+                 Token::String("'a'"),
+                 Token::Keyword(Keyword::Let),
+                 Token::Other("u"),
+                 Token::Operation(Operation::Equal),
+                 Token::FloatingNumber("12.2")]);
 }
