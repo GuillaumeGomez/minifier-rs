@@ -745,7 +745,17 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
         };
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Dot && check_if_number(&mut iterator, start, pos, source) {
-                continue
+                let mut cont = true;
+                if let Some(x) = iterator.peek() {
+                    if !"0123456789,; \t\n<>/*&|{}[]-+=~%^:".contains(x.1) {
+                        fill_other(source, &mut v, start, pos);
+                        start = pos;
+                        cont = false;
+                    }
+                }
+                if cont {
+                    continue
+                }
             }
             fill_other(source, &mut v, start, pos);
             if_match! {
@@ -946,4 +956,19 @@ fn test_number_parsing() {
                  Token::Other("u"),
                  Token::Operation(Operation::Equal),
                  Token::FloatingNumber("12.2")]);
+}
+
+#[test]
+fn test_number_parsing2() {
+    let source = "var x = 12.a;";
+
+    let v = tokenize(source).apply(::js::clean_tokens);
+    assert_eq!(&v.0,
+               &[Token::Keyword(Keyword::Var),
+                 Token::Other("x"),
+                 Token::Operation(Operation::Equal),
+                 Token::Number(12),
+                 Token::Char(ReservedChar::Dot),
+                 Token::Other("a"),
+                 Token::Char(ReservedChar::SemiColon)]);
 }
