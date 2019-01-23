@@ -747,7 +747,7 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
             if c == ReservedChar::Dot && check_if_number(&mut iterator, start, pos, source) {
                 let mut cont = true;
                 if let Some(x) = iterator.peek() {
-                    if !"0123456789,; \t\n<>/*&|{}[]-+=~%^:".contains(x.1) {
+                    if !"0123456789,; \t\n<>/*&|{}[]-+=~%^:!".contains(x.1) {
                         fill_other(source, &mut v, start, pos);
                         start = pos;
                         cont = false;
