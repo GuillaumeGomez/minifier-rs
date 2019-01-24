@@ -862,6 +862,14 @@ var valGenerics = extractGenerics(val);"#;
     assert_eq!(minify(source), expected_result);
 }
 
+#[test]
+fn keep_space() {
+    let source = "return 12;return x;";
+
+    let expected_result = "return 12;return x;";
+    assert_eq!(minify(source), expected_result);
+}
+
 // TODO: requires AST to fix this issue!
 /*#[test]
 fn no_semi_colon() {

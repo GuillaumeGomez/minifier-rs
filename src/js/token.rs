@@ -181,7 +181,11 @@ pub enum Keyword {
 
 fn get_required<'a>(next: &Token<'a>) -> Option<char> {
     match *next {
-        Token::Keyword(_) | Token::Other(_) | Token::CreatedVarDecl(_) => Some(' '),
+        Token::Keyword(_) |
+        Token::Other(_) |
+        Token::CreatedVarDecl(_) |
+        Token::Number(_) |
+        Token::FloatingNumber(_) => Some(' '),
         _ => None,
     }
 }
