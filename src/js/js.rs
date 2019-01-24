@@ -21,7 +21,11 @@
 // SOFTWARE.
 
 use js::token::{self, Keyword, ReservedChar, Token, Tokens};
-use js::utils::{get_variable_name_and_value_positions, VariableNameGenerator};
+use js::utils::{
+    get_array,
+    get_variable_name_and_value_positions,
+    VariableNameGenerator,
+};
 
 use std::collections::{HashMap, HashSet};
 
@@ -401,6 +405,173 @@ pub fn aggregate_strings_with_separation<'a, 'b: 'a>(
     aggregate_strings_inner(tokens, Some(separation_token))
 }
 
+#[inline]
+fn aggregate_strings_into_array_inner<'a, 'b: 'a>(
+    mut tokens: Tokens<'a>,
+    array_name: &str,
+    separation_token: Option<Token<'b>>,
+) -> Tokens<'a> {
+    let mut to_insert = Vec::with_capacity(100);
+    let mut to_replace = Vec::with_capacity(100);
+    // let mut to_replace: Vec<(usize, usize)> = Vec::new();
+
+    {
+        let mut to_ignore = HashSet::new();
+        // key: the token string
+        // value: (position in the array, positions in the tokens list, need creation)
+        let mut strs: HashMap<&str, (usize, Vec<usize>, bool)> = HashMap::with_capacity(1000);
+        let (current_array_values, need_recreate, mut end_bracket) = match get_array(&tokens, array_name) {
+            Some((s, p)) => (s, false, p),
+            None => (Vec::new(), true, 0),
+        };
+        let mut validated: HashSet<&str> = HashSet::new();
+
+        let mut array_pos = 0;
+        let mut array_pos_str;
+        for s in current_array_values.iter() {
+            if let Some(st) = tokens.0[*s].get_string() {
+                strs.insert(&st[1..st.len() - 1], (array_pos, vec![], false));
+                array_pos += 1;
+                validated.insert(&st[1..st.len() - 1]);
+                to_ignore.insert(*s);
+            }
+        }
+
+        array_pos_str = array_pos.to_string();
+        for pos in 0..tokens.len() {
+            if to_ignore.contains(&pos) {
+                continue;
+            }
+            let token = &tokens[pos];
+            if let Some(str_token) = token.get_string() {
+                let s = &str_token[1..str_token.len() - 1];
+                let x = strs.entry(s).or_insert_with(|| (0, Vec::with_capacity(1), true));
+                x.1.push(pos);
+                if x.1.len() > 1 && !validated.contains(s) {
+                    let len = s.len();
+                    if len * x.1.len() > (array_name.len() + array_pos_str.len() + 2) * x.1.len() + array_pos_str.len() + 2 {
+                        validated.insert(&str_token[1..str_token.len() - 1]);
+                        x.0 = array_pos;
+                        array_pos += 1;
+                        array_pos_str = array_pos.to_string();
+                    }
+                }
+            }
+        }
+
+        let mut validated = validated.iter().map(|v| (strs[v].0, v)).collect::<Vec<_>>();
+        validated.sort_unstable_by(|(p1, _), (p2, _)| p2.cmp(p1));
+
+        if need_recreate {
+            if let Some(token) = separation_token {
+                to_insert.push((0, token));
+            }
+            to_insert.push((0, Token::Char(ReservedChar::SemiColon)));
+            to_insert.push((0, Token::Char(ReservedChar::CloseBracket)));
+            to_insert.push((0, Token::Char(ReservedChar::OpenBracket)));
+            to_insert.push((0, Token::CreatedVarDecl(format!("var {}=", array_name))));
+
+            end_bracket = 2;
+        }
+
+        let mut iter = validated.iter().peekable();
+        while let Some((array_pos, s)) = iter.next() {
+            let (_, ref tokens_pos, create_array_entry) = strs[*s];
+            let array_index = Token::CreatedVar(format!("{}[{}]", array_name, array_pos));
+            for token in tokens_pos.iter() {
+                to_replace.push((*token, array_index.clone()));
+            }
+            if !create_array_entry {
+                continue
+            }
+            to_insert.push((end_bracket, Token::CreatedVar(format!("\"{}\"", *s))));
+            if !iter.peek().is_some() {
+                if current_array_values.is_empty() {
+                    continue;
+                }
+            }
+            to_insert.push((end_bracket, Token::Char(ReservedChar::Comma)));
+        }
+    }
+    for (pos, rep) in to_replace.into_iter() {
+        tokens.0[pos] = rep;
+    }
+    for (pos, rep) in to_insert.into_iter() {
+        tokens.0.insert(pos, rep);
+    }
+    tokens
+}
+
+/// Exactly like `aggregate_strings_into_array` except this one expects a separation token
+/// to be passed. This token will be placed between the created array for the
+/// strings aggregation and the rest.
+///
+/// # Example
+///
+/// Let's add a backline between the created variables and the rest of the code:
+///
+/// ```rust,no_run
+/// extern crate minifier;
+/// use minifier::js::{
+///     aggregate_strings_into_array_with_separation,
+///     clean_tokens,
+///     simple_minify,
+///     Token,
+///     ReservedChar,
+/// };
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source);    // First we get the tokens list.
+///     let s = s.apply(|f| {
+///                  aggregate_strings_into_array_with_separation(f, "R", Token::Char(ReservedChar::Backline))
+///              })                   // We add a backline between the variable and the rest.
+///              .apply(clean_tokens) // We clean the tokens.
+///              .to_string();        // And we finally convert to string.
+///     println!("result: {}", s);
+/// }
+/// ```
+#[inline]
+pub fn aggregate_strings_into_array_with_separation<'a, 'b: 'a>(
+    tokens: Tokens<'a>,
+    array_name: &str,
+    separation_token: Token<'b>,
+) -> Tokens<'a> {
+    aggregate_strings_into_array_inner(tokens, array_name, Some(separation_token))
+}
+
+/// Aggregate litteral strings. For instance, if the string litteral "Oh look over there!"
+/// appears more than once, it will be added to the generated array and used everywhere the
+/// string appears. Of course, this replacement is only performed when it allows to take
+/// less space.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// extern crate minifier;
+/// use minifier::js::{aggregate_strings_into_array, clean_tokens, simple_minify};
+/// use std::fs;
+///
+/// fn main() {
+///     let content = fs::read("some_file.js").expect("file not found");
+///     let source = String::from_utf8_lossy(&content);
+///     let s = simple_minify(&source);    // First we get the tokens list.
+///     let s = s.apply(|f| aggregate_strings_into_array(f, "R")) // This `apply` aggregates string litterals.
+///              .apply(clean_tokens)      // This one is used to remove useless chars.
+///              .to_string();             // And we finally convert to string.
+///     println!("result: {}", s);
+/// }
+/// ```
+#[inline]
+pub fn aggregate_strings_into_array<'a>(
+    tokens: Tokens<'a>,
+    array_name: &str,
+) -> Tokens<'a> {
+    aggregate_strings_into_array_inner(tokens, array_name, None)
+}
+
 /// Simple function to get the untouched token list. Useful in case you want to perform some
 /// actions directly on it.
 ///
@@ -421,6 +592,62 @@ pub fn aggregate_strings_with_separation<'a, 'b: 'a>(
 #[inline]
 pub fn simple_minify<'a>(source: &'a str) -> Tokens<'a> {
     token::tokenize(source)
+}
+
+#[test]
+fn aggregate_strings_in_array() {
+    let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
+                             "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
+
+    let result = simple_minify(source).apply(::js::clean_tokens)
+                                      .apply(|c| aggregate_strings_into_array(c, "R"))
+                                      .to_string();
+    assert_eq!(result, expected_result);
+
+    let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
+                             "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var R=[\"a nice string\",\"cake!\"];\nvar x=[R[0],R[0],\
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
+
+    let result = simple_minify(source).apply(::js::clean_tokens)
+                                      .apply(|c| aggregate_strings_into_array_with_separation(c, "R", Token::Char(ReservedChar::Backline)))
+                                      .to_string();
+    assert_eq!(result, expected_result);
+}
+
+#[test]
+fn aggregate_strings_in_array_existing() {
+    let source = r#"var R=[];var x = ["a nice string", "a nice string", "another nice string", "cake!",
+                             "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
+
+    let result = simple_minify(source).apply(::js::clean_tokens)
+                                      .apply(|c| aggregate_strings_into_array(c, "R"))
+                                      .to_string();
+    assert_eq!(result, expected_result);
+
+    let source = r#"var R=["a nice string"];var x = ["a nice string", "a nice string", "another nice string", "cake!",
+                             "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
+
+    let result = simple_minify(source).apply(::js::clean_tokens)
+                                      .apply(|c| aggregate_strings_into_array(c, "R"))
+                                      .to_string();
+    assert_eq!(result, expected_result);
+
+    let source = r#"var y = 12;var R=["a nice string"];var x = ["a nice string", "a nice string", "another nice string", "cake!",
+                             "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var y=12;var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
+
+    let result = simple_minify(source).apply(::js::clean_tokens)
+                                      .apply(|c| aggregate_strings_into_array(c, "R"))
+                                      .to_string();
+    assert_eq!(result, expected_result);
 }
 
 #[test]

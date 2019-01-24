@@ -334,7 +334,7 @@ pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
 pub(crate) fn get_array<'a>(
     tokens: &'a Tokens<'a>,
     array_name: &str,
-) -> Option<Vec<&'a Token<'a>>> {
+) -> Option<(Vec<usize>, usize)> {
     let mut ret = Vec::new();
 
     let mut looking_for_var = false;
@@ -378,11 +378,11 @@ pub(crate) fn get_array<'a>(
         } else if getting_values {
             match &tokens[pos] {
                 Token::Char(ReservedChar::CloseBracket) => {
-                    return Some(ret);
+                    return Some((ret, pos));
                 }
                 s if s.is_comment() || s.is_white_character() => {}
-                s => {
-                    ret.push(s);
+                _ => {
+                    ret.push(pos);
                 }
             }
         } else {
