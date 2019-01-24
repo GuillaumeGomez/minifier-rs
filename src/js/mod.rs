@@ -27,6 +27,8 @@ mod utils;
 pub use self::js::{
     aggregate_strings,
     aggregate_strings_with_separation,
+    aggregate_strings_into_array,
+    aggregate_strings_into_array_with_separation,
     minify,
     simple_minify,
 };

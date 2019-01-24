@@ -334,7 +334,7 @@ pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
 pub(crate) fn get_array<'a>(
     tokens: &'a Tokens<'a>,
     array_name: &str,
-) -> Option<Vec<&'a Token<'a>>> {
+) -> Option<(Vec<usize>, usize)> {
     let mut ret = Vec::new();
 
     let mut looking_for_var = false;
@@ -378,11 +378,11 @@ pub(crate) fn get_array<'a>(
         } else if getting_values {
             match &tokens[pos] {
                 Token::Char(ReservedChar::CloseBracket) => {
-                    return Some(ret);
+                    return Some((ret, pos));
                 }
                 s if s.is_comment() || s.is_white_character() => {}
-                s => {
-                    ret.push(s);
+                _ => {
+                    ret.push(pos);
                 }
             }
         } else {
@@ -396,6 +396,32 @@ pub(crate) fn get_array<'a>(
         }
     }
     None
+}
+
+#[test]
+fn check_get_array() {
+    let source = r#"var x = [  ]; var y = ['hello',
+    12]; var z = []; var w = 12;"#;
+
+    let tokens = ::js::token::tokenize(source);
+
+    let ar = get_array(&tokens, "x");
+    assert!(ar.is_some());
+    assert_eq!(ar.unwrap().1, 9);
+
+    let ar = get_array(&tokens, "y");
+    assert!(ar.is_some());
+    assert_eq!(ar.unwrap().1, 27);
+
+    let ar = get_array(&tokens, "z");
+    assert!(ar.is_some());
+    assert_eq!(ar.unwrap().1, 37);
+
+    let ar = get_array(&tokens, "w");
+    assert!(ar.is_none());
+
+    let ar = get_array(&tokens, "W");
+    assert!(ar.is_none());
 }
 
 #[test]
