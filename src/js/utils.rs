@@ -399,6 +399,32 @@ pub(crate) fn get_array<'a>(
 }
 
 #[test]
+fn check_get_array() {
+    let source = r#"var x = [  ]; var y = ['hello',
+    12]; var z = []; var w = 12;"#;
+
+    let tokens = ::js::token::tokenize(source);
+
+    let ar = get_array(&tokens, "x");
+    assert!(ar.is_some());
+    assert_eq!(ar.unwrap().1, 9);
+
+    let ar = get_array(&tokens, "y");
+    assert!(ar.is_some());
+    assert_eq!(ar.unwrap().1, 27);
+
+    let ar = get_array(&tokens, "z");
+    assert!(ar.is_some());
+    assert_eq!(ar.unwrap().1, 37);
+
+    let ar = get_array(&tokens, "w");
+    assert!(ar.is_none());
+
+    let ar = get_array(&tokens, "W");
+    assert!(ar.is_none());
+}
+
+#[test]
 fn check_get_variable_name_and_value_positions() {
     let source = r#"var x = 1;var y   =   "2",we=4;"#;
     let mut result = Vec::new();

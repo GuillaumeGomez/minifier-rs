@@ -413,7 +413,6 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a>(
 ) -> Tokens<'a> {
     let mut to_insert = Vec::with_capacity(100);
     let mut to_replace = Vec::with_capacity(100);
-    // let mut to_replace: Vec<(usize, usize)> = Vec::new();
 
     {
         let mut to_ignore = HashSet::new();
@@ -615,6 +614,16 @@ fn aggregate_strings_in_array() {
                                       .apply(|c| aggregate_strings_into_array_with_separation(c, "R", Token::Char(ReservedChar::Backline)))
                                       .to_string();
     assert_eq!(result, expected_result);
+
+    let source = r#"var x = ["a nice string", "a nice string", "another nice string", "another nice string", "another nice string", "another nice string","cake!","cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var R=[\"a nice string\",\"another nice string\",\"cake!\"];\n\
+                           var x=[R[0],R[0],R[1],R[1],R[1],R[1],R[2],R[2],R[0],R[2],\
+                           R[2],R[2]];";
+
+    let result = simple_minify(source).apply(::js::clean_tokens)
+                                      .apply(|c| aggregate_strings_into_array_with_separation(c, "R", Token::Char(ReservedChar::Backline)))
+                                      .to_string();
+    assert_eq!(result, expected_result);
 }
 
 #[test]
@@ -643,6 +652,17 @@ fn aggregate_strings_in_array_existing() {
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var y=12;var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
+
+    let result = simple_minify(source).apply(::js::clean_tokens)
+                                      .apply(|c| aggregate_strings_into_array(c, "R"))
+                                      .to_string();
+    assert_eq!(result, expected_result);
+
+    let source = r#"var R=["osef1", "o2", "damn"];
+                    var x = ["a nice string", "a nice string", "another nice string", "cake!",
+                             "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
+    let expected_result = "var R=[\"osef1\",\"o2\",\"damn\",\"a nice string\",\"cake!\"];\
+                           var x=[R[3],R[3],\"another nice string\",R[4],R[4],R[3],R[4],R[4],R[4]];";
 
     let result = simple_minify(source).apply(::js::clean_tokens)
                                       .apply(|c| aggregate_strings_into_array(c, "R"))
