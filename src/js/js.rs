@@ -458,6 +458,23 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a>(
             }
         }
 
+        // TODO:
+        // 1. Sort strings by length (the smallest should take the smallest numbers
+        //    for bigger gains).
+        // 2. Compute "score" for all strings of the same length and sort the strings
+        //    of the same length with this score.
+        // 3. Loop again over strings and remove those who shouldn't be there anymore.
+        // 4. Repeat.
+        //
+        // ALTERNATIVE:
+        //
+        // Compute the score based on:
+        // current number of digits * str length * str occurence
+        //
+        // ^ This second solution should bring even better results.
+        //
+        // ALSO: if an array with such strings already exists, it'd be worth it to recompute
+        // everything again.
         let mut validated = validated.iter().map(|v| (strs[v].0, v)).collect::<Vec<_>>();
         validated.sort_unstable_by(|(p1, _), (p2, _)| p2.cmp(p1));
 
