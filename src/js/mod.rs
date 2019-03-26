@@ -42,8 +42,11 @@ pub use self::token::{
     Tokens,
 };
 pub use self::utils::{
+    clean_token,
     clean_tokens,
+    clean_token_except,
     clean_tokens_except,
     get_variable_name_and_value_positions,
     replace_token_with,
+    replace_tokens_with,
 };

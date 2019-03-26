@@ -852,6 +852,27 @@ impl<'a> ::std::ops::Deref for Tokens<'a> {
     }
 }
 
+impl<'a> From<Vec<Token<'a>>> for Tokens<'a> {
+    fn from(v: Vec<Token<'a>>) -> Self {
+        Tokens(v)
+    }
+}
+
+impl<'a> From<&[Token<'a>]> for Tokens<'a> {
+    fn from(v: &[Token<'a>]) -> Self {
+        Tokens(v.to_vec())
+    }
+}
+
+impl<'a> IntoIterator for Tokens<'a> {
+    type Item = Token<'a>;
+    type IntoIter = ::std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 #[test]
 fn check_regex() {
     let source = r#"var x = /"\.x/g;"#;

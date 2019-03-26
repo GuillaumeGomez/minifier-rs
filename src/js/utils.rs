@@ -100,13 +100,13 @@ impl<'a> VariableNameGenerator<'a> {
     }
 }
 
-/// Minifies a given JS source code and to replace keywords.
+/// Replace given tokens with others.
 ///
 /// # Example
 ///
 /// ```rust
 /// extern crate minifier;
-/// use minifier::js::{Keyword, Token, replace_token_with, simple_minify};
+/// use minifier::js::{Keyword, Token, replace_tokens_with, simple_minify};
 ///
 /// fn main() {
 ///     let js = r#"
@@ -120,7 +120,7 @@ impl<'a> VariableNameGenerator<'a> {
 ///     }"#.into();
 ///     let js_minified = simple_minify(js)
 ///         .apply(|f| {
-///             replace_token_with(f, |t| {
+///             replace_tokens_with(f, |t| {
 ///                 if *t == Token::Keyword(Keyword::Null) {
 ///                     Some(Token::Other("N"))
 ///                 } else {
@@ -139,7 +139,7 @@ impl<'a> VariableNameGenerator<'a> {
 /// var N = null;
 /// ```
 #[inline]
-pub fn replace_token_with<'a, 'b: 'a, F: Fn(&Token<'a>) -> Option<Token<'b>>>(
+pub fn replace_tokens_with<'a, 'b: 'a, F: Fn(&Token<'a>) -> Option<Token<'b>>>(
     mut tokens: Tokens<'a>,
     callback: F,
 ) -> Tokens<'a> {
@@ -149,6 +149,19 @@ pub fn replace_token_with<'a, 'b: 'a, F: Fn(&Token<'a>) -> Option<Token<'b>>>(
         }
     }
     tokens
+}
+
+/// Replace a given token with another.
+#[inline]
+pub fn replace_token_with<'a, 'b: 'a, F: Fn(&Token<'a>) -> Option<Token<'b>>>(
+    token: Token<'a>,
+    callback: &F,
+) -> Token<'a> {
+    if let Some(t) = callback(&token) {
+        t
+    } else {
+        token
+    }
 }
 
 /// When looping over `Tokens`, if you encounter `Keyword::Var`, `Keyword::Let` or
@@ -272,16 +285,21 @@ pub fn get_variable_name_and_value_positions<'a>(
 /// ```
 #[inline]
 pub fn clean_tokens<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
-    tokens.0.retain(|c| {
-        !c.is_comment() && {
-            if let Some(x) = c.get_char() {
-                !x.is_useless()
-            } else {
-                true
-            }
-        }
-    });
+    tokens.0.retain(|c| clean_token(c));
     tokens
+}
+
+/// Returns true if the token is a "useful" one (so not a comment or a "useless"
+/// character).
+#[inline]
+pub fn clean_token<'a>(token: &Token<'a>) -> bool {
+    !token.is_comment() && {
+        if let Some(x) = token.get_char() {
+            !x.is_useless()
+        } else {
+            true
+        }
+    }
 }
 
 /// Same as `clean_tokens` except that if a token is considered as not desired,
@@ -311,23 +329,31 @@ pub fn clean_tokens<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
 #[inline]
 pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
     mut tokens: Tokens<'a>,
-    f: F
+    f: F,
 ) -> Tokens<'a> {
-    tokens.0.retain(|c| {
-        let res = !c.is_comment() && {
-            if let Some(x) = c.get_char() {
-                !x.is_useless()
-            } else {
-                true
-            }
-        };
-        if !res {
-            !f(c)
-        } else {
-            res
-        }
-    });
+    tokens.0.retain(|c| clean_token_except(c, &f));
     tokens
+}
+
+/// Returns true if the token is a "useful" one (so not a comment or a "useless"
+/// character).
+#[inline]
+pub fn clean_token_except<'a, F: Fn(&Token<'a>) -> bool>(
+    token: &Token<'a>,
+    f: &F,
+) -> bool {
+    let res = !token.is_comment() && {
+        if let Some(x) = token.get_char() {
+            !x.is_useless()
+        } else {
+            true
+        }
+    };
+    if !res {
+        !f(token)
+    } else {
+        true
+    }
 }
 
 #[inline]
@@ -466,7 +492,7 @@ var n = null;
     let res = ::js::simple_minify(source)
         .apply(::js::clean_tokens)
         .apply(|f| {
-            replace_token_with(f, |t| {
+            replace_tokens_with(f, |t| {
                 if *t == Token::Keyword(Keyword::Null) {
                     Some(Token::Other("N"))
                 } else {
@@ -474,5 +500,28 @@ var n = null;
                 }
             })
         });
+    assert_eq!(res.to_string(), expected_result);
+}
+
+#[test]
+fn check_iterator() {
+    let source = r#"
+var x = ['a', 'b', null, 'd', {'x': null, 'e': null, 'z': 'w'}];
+var n = null;
+"#;
+    let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
+
+    let res: Tokens = ::js::simple_minify(source)
+                           .into_iter()
+                           .filter(::js::clean_token)
+                           .map(|t| {
+                               if t == Token::Keyword(Keyword::Null) {
+                                   Token::Other("N")
+                               } else {
+                                   t
+                               }
+                           })
+                           .collect::<Vec<_>>()
+                           .into();
     assert_eq!(res.to_string(), expected_result);
 }
