@@ -406,10 +406,11 @@ pub fn aggregate_strings_with_separation<'a, 'b: 'a>(
 }
 
 #[inline]
-fn aggregate_strings_into_array_inner<'a, 'b: 'a>(
+fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> bool>(
     mut tokens: Tokens<'a>,
     array_name: &str,
     separation_token: Option<Token<'b>>,
+    filter: T,
 ) -> Tokens<'a> {
     let mut to_insert = Vec::with_capacity(100);
     let mut to_replace = Vec::with_capacity(100);
@@ -443,6 +444,9 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a>(
             }
             let token = &tokens[pos];
             if let Some(str_token) = token.get_string() {
+                if !filter(&tokens, pos) {
+                    continue;
+                }
                 let s = &str_token[1..str_token.len() - 1];
                 let x = strs.entry(s).or_insert_with(|| (0, Vec::with_capacity(1), true));
                 x.1.push(pos);
@@ -478,7 +482,7 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a>(
         let mut validated = validated.iter().map(|v| (strs[v].0, v)).collect::<Vec<_>>();
         validated.sort_unstable_by(|(p1, _), (p2, _)| p2.cmp(p1));
 
-        if need_recreate {
+        if need_recreate && !validated.is_empty() {
             if let Some(token) = separation_token {
                 to_insert.push((0, token));
             }
@@ -555,7 +559,21 @@ pub fn aggregate_strings_into_array_with_separation<'a, 'b: 'a>(
     array_name: &str,
     separation_token: Token<'b>,
 ) -> Tokens<'a> {
-    aggregate_strings_into_array_inner(tokens, array_name, Some(separation_token))
+    aggregate_strings_into_array_inner(tokens, array_name, Some(separation_token), |_, _| true)
+}
+
+/// Same as [`aggregate_strings_into_array_with_separation`] except it allows certain strings to
+/// not be aggregated thanks to the `filter` parameter. If it returns `false`, then the string will
+/// be ignored.
+#[inline]
+pub fn aggregate_strings_into_array_with_separation_filter<'a, 'b: 'a, T>(
+    tokens: Tokens<'a>,
+    array_name: &str,
+    separation_token: Token<'b>,
+    filter: T,
+) -> Tokens<'a>
+    where T: Fn(&Tokens<'a>, usize) -> bool {
+    aggregate_strings_into_array_inner(tokens, array_name, Some(separation_token), filter)
 }
 
 /// Aggregate litteral strings. For instance, if the string litteral "Oh look over there!"
@@ -585,7 +603,19 @@ pub fn aggregate_strings_into_array<'a>(
     tokens: Tokens<'a>,
     array_name: &str,
 ) -> Tokens<'a> {
-    aggregate_strings_into_array_inner(tokens, array_name, None)
+    aggregate_strings_into_array_inner(tokens, array_name, None, |_, _| true)
+}
+
+/// Same as [`aggregate_strings_into_array`] except it allows certain strings to not be aggregated
+/// thanks to the `filter` parameter. If it returns `false`, then the string will be ignored.
+#[inline]
+pub fn aggregate_strings_into_array_filter<'a, T>(
+    tokens: Tokens<'a>,
+    array_name: &str,
+    filter: T,
+) -> Tokens<'a> 
+    where T: Fn(&Tokens<'a>, usize) -> bool {
+    aggregate_strings_into_array_inner(tokens, array_name, None, filter)
 }
 
 /// Simple function to get the untouched token list. Useful in case you want to perform some
@@ -639,6 +669,35 @@ fn aggregate_strings_in_array() {
 
     let result = simple_minify(source).apply(::js::clean_tokens)
                                       .apply(|c| aggregate_strings_into_array_with_separation(c, "R", Token::Char(ReservedChar::Backline)))
+                                      .to_string();
+    assert_eq!(result, expected_result);
+}
+
+#[test]
+fn aggregate_strings_in_array_filter() {
+    let source = r#"var searchIndex = {};searchIndex['duplicate_paths'] = {'aaaaaaaa': 'bbbbbbbb', 'bbbbbbbb': 'aaaaaaaa', 'duplicate_paths': 'aaaaaaaa'};"#;
+    let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],'duplicate_paths':R[1]};";
+
+    let result = simple_minify(source).apply(::js::clean_tokens)
+                                      .apply(|c| aggregate_strings_into_array_with_separation_filter(c, "R", Token::Char(ReservedChar::Backline), |tokens, pos| {
+                                              pos < 2 ||
+                                              !tokens[pos - 1].is_char(ReservedChar::OpenBracket) ||
+                                              tokens[pos - 2].get_other() != Some("searchIndex")
+                                          }
+                                      ))
+                                      .to_string();
+    assert_eq!(result, expected_result);
+
+    let source = r#"var searchIndex = {};searchIndex['duplicate_paths'] = {'aaaaaaaa': 'bbbbbbbb', 'bbbbbbbb': 'aaaaaaaa', 'duplicate_paths': 'aaaaaaaa', 'x': 'duplicate_paths'};"#;
+    let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\",\"duplicate_paths\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],R[2]:R[1],'x':R[2]};";
+
+    let result = simple_minify(source).apply(::js::clean_tokens)
+                                      .apply(|c| aggregate_strings_into_array_with_separation_filter(c, "R", Token::Char(ReservedChar::Backline), |tokens, pos| {
+                                              pos < 2 ||
+                                              !tokens[pos - 1].is_char(ReservedChar::OpenBracket) ||
+                                              tokens[pos - 2].get_other() != Some("searchIndex")
+                                          }
+                                      ))
                                       .to_string();
     assert_eq!(result, expected_result);
 }
