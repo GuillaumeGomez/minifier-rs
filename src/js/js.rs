@@ -964,6 +964,13 @@ fn keep_space() {
 
     let expected_result = "return 12;return x;";
     assert_eq!(minify(source), expected_result);
+
+    assert_eq!("t in e", minify("t in e"));
+    assert_eq!("t+1 in e", minify("t + 1 in e"));
+    assert_eq!("t-1 in e", minify("t - 1 in e"));
+    assert_eq!("'a' in e", minify("'a' in e"));
+    assert_eq!("/a/g in e", minify("/a/g in e"));
+    assert_eq!("/a/i in e", minify("/a/i in e"));
 }
 
 // TODO: requires AST to fix this issue!
