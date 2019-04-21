@@ -285,7 +285,7 @@ pub fn get_variable_name_and_value_positions<'a>(
 /// ```
 #[inline]
 pub fn clean_tokens<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
-    tokens.0.retain(|c| clean_token(c));
+    tokens.0.retain(clean_token);
     tokens
 }
 

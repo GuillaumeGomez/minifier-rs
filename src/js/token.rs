@@ -179,14 +179,12 @@ pub enum Keyword {
     While,
 }
 
-fn get_required<'a>(next: &Token<'a>) -> Option<char> {
-    match *next {
-        Token::Keyword(_) |
-        Token::Other(_) |
-        Token::CreatedVarDecl(_) |
-        Token::Number(_) |
-        Token::FloatingNumber(_) => Some(' '),
-        _ => None,
+impl Keyword {
+    fn requires_before(&self) -> bool {
+        match *self {
+            Keyword::In | Keyword::InstanceOf | Keyword::Typeof => true,
+            _ => false,
+        }
     }
 }
 
@@ -533,6 +531,24 @@ impl<'a> Token<'a> {
             _ => false,
         }
     }
+
+    fn get_required(&self) -> Option<char> {
+        match *self {
+            Token::Keyword(_) |
+            Token::Other(_) |
+            Token::CreatedVarDecl(_) |
+            Token::Number(_) |
+            Token::FloatingNumber(_) => Some(' '),
+            _ => None,
+        }
+    }
+
+    fn requires_before(&self) -> bool {
+        match *self {
+            Token::Keyword(k) => k.requires_before(),
+            _ => false,
+        }
+    }
 }
 
 fn get_line_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
@@ -824,10 +840,14 @@ impl<'a> fmt::Display for Tokens<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let tokens = &self.0;
         for i in 0..tokens.len() {
+            if i > 0 && tokens[i].requires_before() &&
+               !tokens[i - 1].is_keyword() && !tokens[i - 1].is_other() {
+                write!(f, " ")?;
+            }
             write!(f, "{}", tokens[i])?;
             if let Some(c) = match tokens[i] {
                 Token::Keyword(_) |
-                Token::Other(_) if i + 1 < tokens.len() => get_required(&tokens[i + 1]),
+                Token::Other(_) if i + 1 < tokens.len() => tokens[i + 1].get_required(),
                 _ => None,
             } {
                 write!(f, "{}", c)?;
@@ -996,4 +1016,15 @@ fn test_number_parsing2() {
                  Token::Char(ReservedChar::Dot),
                  Token::Other("a"),
                  Token::Char(ReservedChar::SemiColon)]);
+}
+
+#[test]
+fn tokens_spaces() {
+    let source = "t in e";
+
+    let v = tokenize(source).apply(::js::clean_tokens);
+    assert_eq!(&v.0,
+               &[Token::Other("t"),
+                 Token::Keyword(Keyword::In),
+                 Token::Other("e")]);
 }
