@@ -968,9 +968,34 @@ fn keep_space() {
     assert_eq!("t in e", minify("t in e"));
     assert_eq!("t+1 in e", minify("t + 1 in e"));
     assert_eq!("t-1 in e", minify("t - 1 in e"));
-    assert_eq!("'a' in e", minify("'a' in e"));
+    assert_eq!("'a'in e", minify("'a' in e"));
     assert_eq!("/a/g in e", minify("/a/g in e"));
     assert_eq!("/a/i in e", minify("/a/i in e"));
+
+    assert_eq!("t instanceof e", minify("t instanceof e"));
+    assert_eq!("t+1 instanceof e", minify("t + 1 instanceof e"));
+    assert_eq!("t-1 instanceof e", minify("t - 1 instanceof e"));
+    assert_eq!("'a'instanceof e", minify("'a' instanceof e"));
+    assert_eq!("/a/g instanceof e", minify("/a/g instanceof e"));
+    assert_eq!("/a/i instanceof e", minify("/a/i instanceof e"));
+}
+
+#[test]
+fn test_remove_extra_whitespace_before_typeof() {
+    let source = "var x = typeof 'foo';var y = typeof x;case typeof 'foo': 'bla'";
+
+    let expected_result = "var x=typeof'foo';var y=typeof x;case typeof'foo':'bla'";
+    assert_eq!(minify(source), expected_result);
+}
+
+#[test]
+fn test_remove_extra_whitespace_before_in() {
+    let source = r#"if ("key" in ev && typeof ev) { return true; }
+if (x in ev && typeof ev) { return true; }
+if (true in ev) { return true; }"#;
+
+    let expected_result = r#"if("key"in ev&&typeof ev){return true;}if(x in ev&&typeof ev){return true;}if(true in ev){return true;}"#;
+    assert_eq!(minify(source), expected_result);
 }
 
 // TODO: requires AST to fix this issue!
@@ -994,6 +1019,6 @@ function foo() {
     12;
 }
 "#;
-    let expected_result = r#"function foo(){return;12;}"#;
+    let expected_result = r#"function foo(){return 12;}"#;
     assert_eq!(minify(source), expected_result);
 }*/

@@ -182,7 +182,7 @@ pub enum Keyword {
 impl Keyword {
     fn requires_before(&self) -> bool {
         match *self {
-            Keyword::In | Keyword::InstanceOf | Keyword::Typeof => true,
+            Keyword::In | Keyword::InstanceOf => true,
             _ => false,
         }
     }
@@ -416,6 +416,13 @@ impl<'a> Token<'a> {
     pub fn is_comment(&self) -> bool {
         match *self {
             Token::Comment(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_reserved_char(&self) -> bool {
+        match *self {
+            Token::Char(_) => true,
             _ => false,
         }
     }
@@ -840,8 +847,12 @@ impl<'a> fmt::Display for Tokens<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let tokens = &self.0;
         for i in 0..tokens.len() {
-            if i > 0 && tokens[i].requires_before() &&
-               !tokens[i - 1].is_keyword() && !tokens[i - 1].is_other() {
+            if i > 0 &&
+               tokens[i].requires_before() &&
+               !tokens[i - 1].is_keyword() &&
+               !tokens[i - 1].is_other() &&
+               !tokens[i - 1].is_reserved_char() &&
+               !tokens[i - 1].is_string() {
                 write!(f, " ")?;
             }
             write!(f, "{}", tokens[i])?;
