@@ -804,6 +804,8 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
                 !first_useful(&v).unwrap_or(&Token::String("")).is_other() => {
                     if let Some(r) = get_regex(source, &mut iterator, &mut pos) {
                         v.push(r);
+                    } else {
+                        v.push(Token::Char(c));
                     }
                 },
                 c == ReservedChar::Star &&

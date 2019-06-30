@@ -998,6 +998,14 @@ if (true in ev) { return true; }"#;
     assert_eq!(minify(source), expected_result);
 }
 
+#[test]
+fn test_remove_extra_whitespace_before_operator() {
+    let source = "( x ) / 2";
+
+    let expected_result = "(x)/2";
+    assert_eq!(minify(source), expected_result);
+}
+
 // TODO: requires AST to fix this issue!
 /*#[test]
 fn no_semi_colon() {
