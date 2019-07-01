@@ -944,7 +944,7 @@ for (var entry in results) {
     }
 }"#;
     let expected_result = "for(var entry in results){if(results.hasOwnProperty(entry)){\
-                           ar.push(results[entry]);}}";
+                           ar.push(results[entry])}}";
     assert_eq!(minify(source), expected_result);
 }
 
@@ -994,15 +994,15 @@ fn test_remove_extra_whitespace_before_in() {
 if (x in ev && typeof ev) { return true; }
 if (true in ev) { return true; }"#;
 
-    let expected_result = r#"if("key"in ev&&typeof ev){return true;}if(x in ev&&typeof ev){return true;}if(true in ev){return true;}"#;
+    let expected_result = r#"if("key"in ev&&typeof ev){return true}if(x in ev&&typeof ev){return true}if(true in ev){return true}"#;
     assert_eq!(minify(source), expected_result);
 }
 
 #[test]
 fn test_remove_extra_whitespace_before_operator() {
-    let source = "( x ) / 2";
+    let source = "( x ) / 2; x / y;x /= y";
 
-    let expected_result = "(x)/2";
+    let expected_result = "(x)/2;x/y;x/=y";
     assert_eq!(minify(source), expected_result);
 }
 

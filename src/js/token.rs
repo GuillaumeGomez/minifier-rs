@@ -877,6 +877,35 @@ impl<'a> Tokens<'a> {
     }
 }
 
+pub struct IntoIterTokens<'a> {
+    inner: Tokens<'a>,
+}
+
+impl<'a> IntoIterator for Tokens<'a> {
+    type Item = (Token<'a>, Option<&'a Token<'a>>);
+    type IntoIter = IntoIterTokens<'a>;
+
+    fn into_iter(mut self) -> Self::IntoIter {
+        self.0.reverse();
+        IntoIterTokens {
+            inner: self,
+        }
+    }
+}
+
+impl<'a> Iterator for IntoIterTokens<'a> {
+    type Item = (Token<'a>, Option<&'a Token<'a>>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.inner.0.is_empty() {
+            None
+        } else {
+            let ret = self.inner.0.pop().expect("pop() failed");
+            Some((ret, unsafe { ::std::mem::transmute(self.inner.0.get(0)) }))
+        }
+    }
+}
+
 impl<'a> ::std::ops::Deref for Tokens<'a> {
     type Target = Vec<Token<'a>>;
 
@@ -894,15 +923,6 @@ impl<'a> From<Vec<Token<'a>>> for Tokens<'a> {
 impl<'a> From<&[Token<'a>]> for Tokens<'a> {
     fn from(v: &[Token<'a>]) -> Self {
         Tokens(v.to_vec())
-    }
-}
-
-impl<'a> IntoIterator for Tokens<'a> {
-    type Item = Token<'a>;
-    type IntoIter = ::std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
     }
 }
 

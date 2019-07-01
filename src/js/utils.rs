@@ -284,18 +284,23 @@ pub fn get_variable_name_and_value_positions<'a>(
 /// }
 /// ```
 #[inline]
-pub fn clean_tokens<'a>(mut tokens: Tokens<'a>) -> Tokens<'a> {
-    tokens.0.retain(clean_token);
-    tokens
+pub fn clean_tokens<'a>(tokens: Tokens<'a>) -> Tokens<'a> {
+    tokens.into_iter()
+          .filter(|(x, next)| clean_token(x, next))
+          .map(|(x, _)| x)
+          .collect::<Vec<_>>()
+          .into()
 }
 
 /// Returns true if the token is a "useful" one (so not a comment or a "useless"
 /// character).
 #[inline]
-pub fn clean_token<'a>(token: &Token<'a>) -> bool {
+pub fn clean_token(token: &Token<'_>, next_token: &Option<&Token<'_>>) -> bool {
     !token.is_comment() && {
         if let Some(x) = token.get_char() {
-            !x.is_useless()
+            !x.is_useless() &&
+            (x != ReservedChar::SemiColon ||
+             *next_token != Some(&Token::Char(ReservedChar::CloseCurlyBrace)))
         } else {
             true
         }
@@ -328,11 +333,14 @@ pub fn clean_token<'a>(token: &Token<'a>) -> bool {
 /// ```
 #[inline]
 pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
-    mut tokens: Tokens<'a>,
+    tokens: Tokens<'a>,
     f: F,
 ) -> Tokens<'a> {
-    tokens.0.retain(|c| clean_token_except(c, &f));
-    tokens
+    tokens.into_iter()
+        .filter(|(c, next)| clean_token_except(c, next, &f))
+        .map(|(c, _)| c)
+        .collect::<Vec<_>>()
+        .into()
 }
 
 /// Returns true if the token is a "useful" one (so not a comment or a "useless"
@@ -340,16 +348,10 @@ pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
 #[inline]
 pub fn clean_token_except<'a, F: Fn(&Token<'a>) -> bool>(
     token: &Token<'a>,
+    next_token: &Option<&Token<'_>>,
     f: &F,
 ) -> bool {
-    let res = !token.is_comment() && {
-        if let Some(x) = token.get_char() {
-            !x.is_useless()
-        } else {
-            true
-        }
-    };
-    if !res {
+    if !clean_token(token, next_token) {
         !f(token)
     } else {
         true
@@ -513,8 +515,8 @@ var n = null;
 
     let res: Tokens = ::js::simple_minify(source)
                            .into_iter()
-                           .filter(::js::clean_token)
-                           .map(|t| {
+                           .filter(|(x, next)| ::js::clean_token(x, next))
+                           .map(|(t, _)| {
                                if t == Token::Keyword(Keyword::Null) {
                                    Token::Other("N")
                                } else {
