@@ -901,6 +901,8 @@ impl<'a> Iterator for IntoIterTokens<'a> {
             None
         } else {
             let ret = self.inner.0.pop().expect("pop() failed");
+            // FIXME once generic traits' types are stabilized, use a second
+            // lifetime instead of transmute!
             Some((ret, unsafe { ::std::mem::transmute(self.inner.0.get(0)) }))
         }
     }
