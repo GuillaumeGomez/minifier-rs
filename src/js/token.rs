@@ -21,7 +21,6 @@
 // SOFTWARE.
 
 use std::fmt;
-use std::iter::Peekable;
 use std::str::{CharIndices, FromStr};
 
 pub trait MyTryFrom<T>: Sized {
@@ -558,7 +557,7 @@ impl<'a> Token<'a> {
     }
 }
 
-fn get_line_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
+fn get_line_comment<'a>(source: &'a str, iterator: &mut MyPeekable<'_>,
                         start_pos: &mut usize) -> Option<Token<'a>> {
     *start_pos += 1;
     while let Some((pos, c)) = iterator.next() {
@@ -573,8 +572,9 @@ fn get_line_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
     None
 }
 
-fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
+fn get_regex<'a>(source: &'a str, iterator: &mut MyPeekable<'_>,
                  start_pos: &mut usize) -> Option<Token<'a>> {
+    iterator.start_save();
     *start_pos += 1;
     while let Some((pos, c)) = iterator.next() {
         if c == '\\' {
@@ -589,8 +589,8 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                 let mut add = 0;
                 loop {
                     match iterator.peek() {
-                        Some(&(_, 'i')) => is_interactive = true,
-                        Some(&(_, 'g')) => is_global = true,
+                        Some((_, 'i')) => is_interactive = true,
+                        Some((_, 'g')) => is_global = true,
                         _ => break,
                     };
                     iterator.next();
@@ -602,14 +602,16 @@ fn get_regex<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
                                    is_global: is_global,
                                });
                 *start_pos = pos + add;
+                iterator.drop_save();
                 return ret;
             }
         }
     }
+    iterator.stop_save();
     None
 }
 
-fn get_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
+fn get_comment<'a>(source: &'a str, iterator: &mut MyPeekable<'_>,
                    start_pos: &mut usize) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
     *start_pos += 1;
@@ -642,7 +644,7 @@ fn get_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
     None
 }
 
-fn get_string<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>, start_pos: &mut usize,
+fn get_string<'a>(source: &'a str, iterator: &mut MyPeekable<'_>, start_pos: &mut usize,
                   start: ReservedChar) -> Option<Token<'a>> {
     while let Some((pos, c)) = iterator.next() {
         if c == '\\' {
@@ -742,7 +744,7 @@ fn handle_equal_sign(v: &mut Vec<Token>, c: ReservedChar) -> bool {
 }
 
 fn check_if_number<'a>(
-    iterator: &mut Peekable<CharIndices>,
+    iterator: &mut MyPeekable,
     start: usize,
     pos: usize,
     source: &'a str,
@@ -752,15 +754,87 @@ fn check_if_number<'a>(
     } else if u64::from_str(&source[start..pos]).is_ok() {
         return true;
     } else if let Some((_, x)) = iterator.peek() {
-        return *x as u8 >= b'0' && *x as u8 <= b'9';
+        return x as u8 >= b'0' && x as u8 <= b'9';
     }
     false
+}
+
+struct MyPeekable<'a> {
+    inner: CharIndices<'a>,
+    saved: Vec<(usize, char)>,
+    peeked: Option<(usize, char)>,
+    is_saving: bool,
+}
+
+impl<'a> MyPeekable<'a> {
+    fn new(indices: CharIndices<'a>) -> MyPeekable<'a> {
+        MyPeekable {
+            inner: indices,
+            saved: Vec::with_capacity(500),
+            peeked: None,
+            is_saving: false,
+        }
+    }
+
+    fn start_save(&mut self) {
+        self.is_saving = true;
+        if let Some(p) = self.peeked {
+            self.saved.push(p);
+        }
+    }
+
+    fn drop_save(&mut self) {
+        self.is_saving = false;
+        self.saved.clear();
+    }
+
+    fn stop_save(&mut self) {
+        self.is_saving = false;
+        if let Some(p) = self.peeked {
+            self.saved.push(p);
+        }
+        self.peeked = None;
+    }
+
+    /// Returns None if saving.
+    fn peek(&mut self) -> Option<(usize, char)> {
+        if self.peeked.is_none() {
+            self.peeked = self.inner.next();
+            if self.is_saving {
+                if let Some(p) = self.peeked {
+                    self.saved.push(p);
+                }
+            }
+        }
+        self.peeked
+    }
+}
+
+impl<'a> Iterator for MyPeekable<'a> {
+    type Item = (usize, char);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.peeked.is_some() {
+            self.peeked.take()
+        } else {
+            if !self.is_saving && !self.saved.is_empty() {
+                return Some(self.saved.remove(0));
+            }
+            match self.inner.next() {
+                Some(r) if self.is_saving => {
+                    self.saved.push(r);
+                    Some(r)
+                }
+                r => r,
+            }
+        }
+    }
 }
 
 pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
     let mut v = Vec::with_capacity(1000);
     let mut start = 0;
-    let mut iterator = source.char_indices().peekable();
+    let mut iterator = MyPeekable::new(source.char_indices());
 
     loop {
         let (mut pos, c) = match iterator.next() {
