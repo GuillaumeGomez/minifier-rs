@@ -208,10 +208,6 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 #[inline]
 pub fn minify(source: &str) -> String {
     token::tokenize(source).apply(::js::clean_tokens).to_string()
-    /*match build_ast(&v) {
-        Ok(x) => {}
-        Err(e) => eprintln!("Failure: {}", e),
-    }*/
 }
 
 // TODO: No scope handling or anything. Might be nice as a second step to add it...
@@ -811,11 +807,43 @@ var y = "salut";
 var z = "ok!";"#;
     let expected = r#"var x=[1,2,3];
 var y="salut";
-var z="ok!";"#;
+var z="ok!""#;
 
     let result = simple_minify(source).apply(|f| {
                      ::js::clean_tokens_except(f, |c| {
                          c.get_char() != Some(ReservedChar::Backline)
+                     })
+                 }).to_string();
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn clean_except2() {
+    use self::token::ReservedChar;
+
+    let source = "let x = [ 1, 2, \t3];";
+    let expected = "let x = [ 1, 2, 3];";
+
+    let result = simple_minify(source).apply(|f| {
+                     ::js::clean_tokens_except(f, |c| {
+                         c.get_char() != Some(ReservedChar::Space) &&
+                         c.get_char() != Some(ReservedChar::SemiColon)
+                     })
+                 }).to_string();
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn clean_except3() {
+    use self::token::ReservedChar;
+
+    let source = "let x = [ 1, 2, \t3];";
+    let expected = "let x=[1,2,\t3];";
+
+    let result = simple_minify(source).apply(|f| {
+                     ::js::clean_tokens_except(f, |c| {
+                         c.get_char() != Some(ReservedChar::Tab) &&
+                         c.get_char() != Some(ReservedChar::SemiColon)
                      })
                  }).to_string();
     assert_eq!(result, expected);
