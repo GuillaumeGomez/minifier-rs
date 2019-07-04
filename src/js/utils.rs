@@ -340,6 +340,20 @@ pub fn clean_token(token: &Token<'_>, next_token: &Option<&Token<'_>>) -> bool {
     }
 }
 
+#[inline]
+fn get_next_except<'a, F: Fn(&Token<'a>) -> bool>(
+    it: &mut IntoIter<Token<'a>>,
+    f: &F,
+) -> Option<Token<'a>> {
+    while let Some(t) = it.next() {
+        if (t.is_comment() || t.is_white_character()) && f(&t) {
+            continue
+        }
+        return Some(t);
+    }
+    None
+}
+
 /// Same as `clean_tokens` except that if a token is considered as not desired,
 /// the callback is called. If the callback returns `false` as well, it will
 /// be removed.
@@ -369,11 +383,39 @@ pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
     tokens: Tokens<'a>,
     f: F,
 ) -> Tokens<'a> {
-    tokens.into_iter()
-        .filter(|(c, next)| clean_token_except(c, next, &f))
-        .map(|(c, _)| c)
-        .collect::<Vec<_>>()
-        .into()
+    let mut v = Vec::with_capacity(tokens.len() / 3 * 2);
+    let mut it = tokens.0.into_iter();
+
+    loop {
+        let token = get_next_except(&mut it, &f);
+        if token.is_none() {
+            break;
+        }
+        let token = token.unwrap();
+        if token.is_white_character() {
+            if f(&token) {
+                continue
+            }
+        } else if token.get_char() == Some(ReservedChar::SemiColon) {
+            if v.is_empty() {
+                if !f(&token) {
+                    v.push(token);
+                }
+                continue
+            }
+            if let Some(next) = get_next_except(&mut it, &f) {
+                if next != Token::Char(ReservedChar::CloseCurlyBrace) || !f(&token) {
+                    v.push(token);
+                }
+                v.push(next);
+            } else if !f(&token) {
+                v.push(token);
+            }
+            continue
+        }
+        v.push(token);
+    }
+    v.into()
 }
 
 /// Returns true if the token is a "useful" one (so not a comment or a "useless"
