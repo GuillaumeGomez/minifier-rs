@@ -4,16 +4,7 @@
 
 Minifier tool/lib for JS/CSS/JSON files.
 
-This crate provides both a library and binary, depending on your needs.
-
-## Sponsor
-
-<a href="https://g.readmeads.com/readmeads-minifier-rs" target="_blank">
-    <img src="https://assets.readmeads.com/advertisers/readmeads/minifier-rs.png?" />
-</a>
-
-Minifier RS is proudly supported by [ReadMeAds](https://g.readmeads.com/readmeads-minifier-rs).  ReadMeAds is the best way to start passively monetizing the open source work that you do.  
-
+This crate provides both a library and binary, depending on your needs. 
 
 ## Usage
 
@@ -39,3 +30,11 @@ extern crate minifier;
 ## WARNING!!
 
 Please be aware that this is still at a very early stage of development so you shouldn't rely on it too much!
+
+## Sponsor
+
+<a href="https://g.readmeads.com/readmeads-minifier-rs" target="_blank">
+    <img src="https://assets.readmeads.com/advertisers/readmeads/minifier-rs.png?" />
+</a>
+
+`minifier-rs` is proudly supported by [ReadMeAds](https://g.readmeads.com/readmeads-minifier-rs). ReadMeAds is the best way to start passively monetizing the open source work that you do. 
