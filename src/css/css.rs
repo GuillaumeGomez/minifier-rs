@@ -255,6 +255,13 @@ fn check_space_after_paren() {
 }
 
 #[test]
+fn check_space_after_and() {
+    let s = "@media only screen and (max-width : 600px) {}";
+    let expected = "@media only screen and (max-width:600px){}";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+}
+
+#[test]
 fn check_whitespaces_in_calc() {
     let s = ".foo { width: calc(130px     + 10%); }";
     let expected = ".foo{width:calc(130px + 10%);}";
