@@ -588,7 +588,9 @@ fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
             }
         }
         if v[i].is_useless() {
-            if is_in_calc == false &&
+            if i > 0 && v[i - 1] == Token::Other("and") {
+                // retain the space after an and
+            } else if is_in_calc == false &&
                ((i > 0 && ((v[i - 1].is_char() &&
                            v[i - 1] != Token::Char(ReservedChar::CloseParenthese)) ||
                           v[i - 1].is_a_media() ||
@@ -657,6 +659,7 @@ fn css_basic() {
                         Token::Other("screen"),
                         Token::Char(ReservedChar::Space),
                         Token::Other("and"),
+                        Token::Char(ReservedChar::Space),
                         Token::Char(ReservedChar::OpenParenthese),
                         Token::Other("max-width"),
                         Token::Char(ReservedChar::Colon),
