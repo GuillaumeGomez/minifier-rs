@@ -558,7 +558,9 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
                 (!v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_char() ||
                  v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_operator() ||
                  v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
-                         .get_char() == Some(ReservedChar::CloseParenthese)) => {
+                         .get_char() == Some(ReservedChar::CloseParenthese) ||
+                 v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
+                         .get_char() == Some(ReservedChar::CloseBracket)) => {
                     v.push(Token::Char(ReservedChar::Space));
                 },
                 let Ok(op) = Operator::try_from(c) => {
@@ -587,8 +589,15 @@ fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
                 paren += 1;
             }
         }
+
         if v[i].is_useless() {
-            if i > 0 && v[i - 1] == Token::Other("and") {
+            if i > 0 && v[i - 1] == Token::Char(ReservedChar::CloseBracket) {
+                if i + 1 < v.len() &&
+                    (v[i + 1].is_useless() || v[i + 1] == Token::Char(ReservedChar::OpenCurlyBrace)) {
+                        v.remove(i);
+                        continue
+                }
+            } else if i > 0 && v[i - 1] == Token::Other("and") {
                 // retain the space after an and
             } else if is_in_calc == false &&
                ((i > 0 && ((v[i - 1].is_char() &&

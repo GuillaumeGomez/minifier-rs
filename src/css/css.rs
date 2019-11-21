@@ -262,6 +262,21 @@ fn check_space_after_and() {
 }
 
 #[test]
+fn check_space_after_brackets() {
+    let s = "#main[data-behavior = \"1\"] {}";
+    let expected = "#main[data-behavior=\"1\"]{}";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+
+    let s = "#main[data-behavior = \"1\"] .aclass";
+    let expected = "#main[data-behavior=\"1\"] .aclass";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+
+    let s = "#main[data-behavior = \"1\"] ul.aclass";
+    let expected = "#main[data-behavior=\"1\"] ul.aclass";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+}
+
+#[test]
 fn check_whitespaces_in_calc() {
     let s = ".foo { width: calc(130px     + 10%); }";
     let expected = ".foo{width:calc(130px + 10%);}";
