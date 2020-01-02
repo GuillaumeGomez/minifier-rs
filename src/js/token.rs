@@ -615,7 +615,6 @@ fn get_regex<'a>(source: &'a str, iterator: &mut MyPeekable<'_>,
         }
     }
     iterator.start_save();
-    *start_pos += 1;
     while let Some((pos, c)) = iterator.next() {
         if c == '\\' {
             // we skip next character
@@ -637,11 +636,11 @@ fn get_regex<'a>(source: &'a str, iterator: &mut MyPeekable<'_>,
                     add += 1;
                 }
                 let ret = Some(Token::Regex {
-                                   regex: &source[*start_pos..pos],
-                                   is_interactive: is_interactive,
-                                   is_global: is_global,
-                               });
-                *start_pos = pos + add;
+                    regex: &source[*start_pos + 1..pos],
+                    is_interactive: is_interactive,
+                    is_global: is_global,
+                });
+                *start_pos = pos + add + 1;
                 iterator.drop_save();
                 return ret;
             } else if c.is_white_character() {
@@ -1198,4 +1197,15 @@ fn tokens_spaces() {
                &[Token::Other("t"),
                  Token::Keyword(Keyword::In),
                  Token::Other("e")]);
+}
+
+#[test]
+fn division_by_id() {
+    let source = "100/abc";
+
+    let v = tokenize(source).apply(::js::clean_tokens);
+    assert_eq!(&v.0,
+               &[Token::Number(100),
+                 Token::Operation(Operation::Divide),
+                 Token::Other("abc")]);
 }
