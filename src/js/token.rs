@@ -326,6 +326,20 @@ pub enum Operation {
     Equal,
 }
 
+impl Operation {
+    pub fn is_assign(&self) -> bool {
+        match *self {
+            Operation::AdditionEqual |
+            Operation::SubtractEqual |
+            Operation::MultiplyEqual |
+            Operation::DivideEqual |
+            Operation::ModuloEqual |
+            Operation::Equal => true,
+            _ => false,
+        }
+    }
+}
+
 impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}",
@@ -606,11 +620,8 @@ fn get_regex<'a>(source: &'a str, iterator: &mut MyPeekable<'_>,
             Token::Char(ReservedChar::Colon) |
             Token::Char(ReservedChar::Comma) |
             Token::Char(ReservedChar::OpenBracket) |
-            Token::Char(ReservedChar::CloseBracket) |
             Token::Char(ReservedChar::OpenParenthese) |
-            Token::Char(ReservedChar::CloseParenthese) => break,
-            x if x.is_operation() || x.is_number() || x.is_floating_number() ||
-                 x.is_condition() || x.is_other() => break,
+            Token::Operation(Operation::Equal) => break,
             _ => return None,
         }
     }
@@ -643,8 +654,6 @@ fn get_regex<'a>(source: &'a str, iterator: &mut MyPeekable<'_>,
                 *start_pos = pos + add + 1;
                 iterator.drop_save();
                 return ret;
-            } else if c.is_white_character() {
-                break;
             }
         }
     }
@@ -1094,6 +1103,19 @@ fn more_regex() {
                    regex: "\\\\",
                    is_global: false,
                    is_interactive: true,
+               });
+}
+
+#[test]
+fn even_more_regex() {
+    let source = r#"var x = /a-z /;"#;
+
+    let v = tokenize(source).apply(::js::clean_tokens);
+    assert_eq!(v.0[3],
+               Token::Regex {
+                   regex: "a-z ",
+                   is_global: false,
+                   is_interactive: false,
                });
 }
 
