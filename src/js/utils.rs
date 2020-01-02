@@ -231,7 +231,7 @@ pub fn get_variable_name_and_value_positions<'a>(
     while tmp < tokens.len() {
         if tokens[tmp].is_other() {
             let mut tmp2 = tmp + 1;
-            'big: while tmp2 < tokens.len() {
+            while tmp2 < tokens.len() {
                 if tokens[tmp2] == Token::Operation(Operation::Equal) {
                     tmp2 += 1;
                     while tmp2 < tokens.len() {
