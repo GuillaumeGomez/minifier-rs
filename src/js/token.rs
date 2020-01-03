@@ -654,6 +654,8 @@ fn get_regex<'a>(source: &'a str, iterator: &mut MyPeekable<'_>,
                 *start_pos = pos + add + 1;
                 iterator.drop_save();
                 return ret;
+            } else if c == ReservedChar::Backline {
+                break
             }
         }
     }
@@ -1138,6 +1140,18 @@ fn not_regex_test() {
                  Token::Other("x"),
                  Token::Operation(Operation::DivideEqual),
                  Token::Other("y")]);
+
+    let source = "let x = /x\ny/;";
+
+    let v = tokenize(source).apply(::js::clean_tokens);
+    assert_eq!(&v.0,
+               &[Token::Keyword(Keyword::Let),
+                 Token::Other("x"),
+                 Token::Operation(Operation::Equal),
+                 Token::Operation(Operation::Divide),
+                 Token::Other("x"),
+                 Token::Other("y"),
+                 Token::Operation(Operation::Divide)]);
 }
 
 #[test]
