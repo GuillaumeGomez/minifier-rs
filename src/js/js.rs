@@ -1034,6 +1034,20 @@ fn test_remove_extra_whitespace_before_operator() {
     assert_eq!(minify(source), expected_result);
 }
 
+#[test]
+fn check_regex_syntax() {
+    let source = "console.log(/MSIE|Trident|Edge/.test(window.navigator.userAgent));";
+    let expected = "console.log(/MSIE|Trident|Edge/.test(window.navigator.userAgent))";
+    assert_eq!(minify(source), expected);
+}
+
+#[test]
+fn minify_minified() {
+    let source = "function (i, n, a) { i[n].type.replace(/ *;(.|\\s)*/,\"\")===t&&a.push(i[n].MathJax.elementJax);return a}";
+    let expected = "function(i,n,a){i[n].type.replace(/ *;(.|\\s)*/,\"\")===t&&a.push(i[n].MathJax.elementJax);return a}";
+    assert_eq!(minify(source), expected);
+}
+
 // TODO: requires AST to fix this issue!
 /*#[test]
 fn no_semi_colon() {
