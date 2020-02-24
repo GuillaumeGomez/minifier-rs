@@ -651,7 +651,7 @@ fn get_regex<'a>(source: &'a str, iterator: &mut MyPeekable<'_>,
                     is_interactive: is_interactive,
                     is_global: is_global,
                 });
-                *start_pos = pos + add + 1;
+                *start_pos = pos + add;
                 iterator.drop_save();
                 return ret;
             } else if c == ReservedChar::Backline {
