@@ -1,5 +1,8 @@
-use std::{fmt, io::{Error, Read}};
 use super::internal_buffer::Buffer;
+use std::{
+    fmt,
+    io::{Error, Read},
+};
 
 pub struct InternalReader<R> {
     read: R,

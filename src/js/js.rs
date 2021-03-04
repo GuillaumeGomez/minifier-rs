@@ -21,11 +21,7 @@
 // SOFTWARE.
 
 use js::token::{self, Keyword, ReservedChar, Token, Tokens};
-use js::utils::{
-    get_array,
-    get_variable_name_and_value_positions,
-    VariableNameGenerator,
-};
+use js::utils::{get_array, get_variable_name_and_value_positions, VariableNameGenerator};
 
 use std::collections::{HashMap, HashSet};
 
@@ -207,7 +203,9 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 /// ```
 #[inline]
 pub fn minify(source: &str) -> String {
-    token::tokenize(source).apply(::js::clean_tokens).to_string()
+    token::tokenize(source)
+        .apply(::js::clean_tokens)
+        .to_string()
 }
 
 // TODO: No scope handling or anything. Might be nice as a second step to add it...
@@ -220,7 +218,9 @@ fn get_variables_name<'a>(
 
     while pos < tokens.len() {
         if tokens[pos].is_keyword() || tokens[pos].is_other() {
-            if let Some((var_pos, Some(value_pos))) = get_variable_name_and_value_positions(tokens, pos) {
+            if let Some((var_pos, Some(value_pos))) =
+                get_variable_name_and_value_positions(tokens, pos)
+            {
                 pos = value_pos;
                 if let Some(var_name) = tokens[var_pos].get_other() {
                     if !var_name.starts_with("r_") {
@@ -276,7 +276,9 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
                     // Computation here is simple, we declare new variables when creating this so
                     // the total of characters must be shorter than:
                     // `var r_aa=...;` -> 10 + `r_aa` -> 14
-                    if (x.len() + 2 /* quotes */) * len > next_name.len() + str_token.len() + 6 /* var _=_;*/ + x.len() * next_name.len() {
+                    if (x.len() + 2/* quotes */) * len
+                        > next_name.len() + str_token.len() + 6 /* var _=_;*/ + x.len() * next_name.len()
+                    {
                         validated.insert(token, next_name.clone());
                         var_gen.next();
                         next_name = var_gen.to_string();
@@ -297,7 +299,7 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
                 let mut $x = $x.into_iter().collect::<Vec<_>>();
                 $x.sort_unstable_by(|a, b| a.1.cmp(&b.1));
                 $x
-            }}
+            }};
         }
         /*#[cfg(not(test))]
         macro_rules! inner_loop {
@@ -317,7 +319,10 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
         } else {
             new_vars.push(Token::Char(ReservedChar::Comma));
         }
-        new_vars.push(Token::CreatedVarDecl(format!("{}={}", var_name, tokens[positions[0]])));
+        new_vars.push(Token::CreatedVarDecl(format!(
+            "{}={}",
+            var_name, tokens[positions[0]]
+        )));
         for pos in positions {
             tokens.0[pos] = Token::CreatedVar(var_name.clone());
         }
@@ -416,10 +421,11 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
         // key: the token string
         // value: (position in the array, positions in the tokens list, need creation)
         let mut strs: HashMap<&str, (usize, Vec<usize>, bool)> = HashMap::with_capacity(1000);
-        let (current_array_values, need_recreate, mut end_bracket) = match get_array(&tokens, array_name) {
-            Some((s, p)) => (s, false, p),
-            None => (Vec::new(), true, 0),
-        };
+        let (current_array_values, need_recreate, mut end_bracket) =
+            match get_array(&tokens, array_name) {
+                Some((s, p)) => (s, false, p),
+                None => (Vec::new(), true, 0),
+            };
         let mut validated: HashSet<&str> = HashSet::new();
 
         let mut array_pos = 0;
@@ -444,11 +450,17 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
                     continue;
                 }
                 let s = &str_token[1..str_token.len() - 1];
-                let x = strs.entry(s).or_insert_with(|| (0, Vec::with_capacity(1), true));
+                let x = strs
+                    .entry(s)
+                    .or_insert_with(|| (0, Vec::with_capacity(1), true));
                 x.1.push(pos);
                 if x.1.len() > 1 && !validated.contains(s) {
                     let len = s.len();
-                    if len * x.1.len() > (array_name.len() + array_pos_str.len() + 2) * x.1.len() + array_pos_str.len() + 2 {
+                    if len * x.1.len()
+                        > (array_name.len() + array_pos_str.len() + 2) * x.1.len()
+                            + array_pos_str.len()
+                            + 2
+                    {
                         validated.insert(&str_token[1..str_token.len() - 1]);
                         x.0 = array_pos;
                         array_pos += 1;
@@ -498,7 +510,7 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
                 to_replace.push((*token, array_index.clone()));
             }
             if !create_array_entry {
-                continue
+                continue;
             }
             to_insert.push((end_bracket, Token::CreatedVar(format!("\"{}\"", *s))));
             if !iter.peek().is_some() {
@@ -568,7 +580,9 @@ pub fn aggregate_strings_into_array_with_separation_filter<'a, 'b: 'a, T>(
     separation_token: Token<'b>,
     filter: T,
 ) -> Tokens<'a>
-    where T: Fn(&Tokens<'a>, usize) -> bool {
+where
+    T: Fn(&Tokens<'a>, usize) -> bool,
+{
     aggregate_strings_into_array_inner(tokens, array_name, Some(separation_token), filter)
 }
 
@@ -595,10 +609,7 @@ pub fn aggregate_strings_into_array_with_separation_filter<'a, 'b: 'a, T>(
 /// }
 /// ```
 #[inline]
-pub fn aggregate_strings_into_array<'a>(
-    tokens: Tokens<'a>,
-    array_name: &str,
-) -> Tokens<'a> {
+pub fn aggregate_strings_into_array<'a>(tokens: Tokens<'a>, array_name: &str) -> Tokens<'a> {
     aggregate_strings_into_array_inner(tokens, array_name, None, |_, _| true)
 }
 
@@ -609,8 +620,10 @@ pub fn aggregate_strings_into_array_filter<'a, T>(
     tokens: Tokens<'a>,
     array_name: &str,
     filter: T,
-) -> Tokens<'a> 
-    where T: Fn(&Tokens<'a>, usize) -> bool {
+) -> Tokens<'a>
+where
+    T: Fn(&Tokens<'a>, usize) -> bool,
+{
     aggregate_strings_into_array_inner(tokens, array_name, None, filter)
 }
 
@@ -643,9 +656,10 @@ fn aggregate_strings_in_array() {
     let expected_result = "var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|c| aggregate_strings_into_array(c, "R"))
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|c| aggregate_strings_into_array(c, "R"))
+        .to_string();
     assert_eq!(result, expected_result);
 
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
@@ -653,9 +667,16 @@ fn aggregate_strings_in_array() {
     let expected_result = "var R=[\"a nice string\",\"cake!\"];\nvar x=[R[0],R[0],\
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|c| aggregate_strings_into_array_with_separation(c, "R", Token::Char(ReservedChar::Backline)))
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|c| {
+            aggregate_strings_into_array_with_separation(
+                c,
+                "R",
+                Token::Char(ReservedChar::Backline),
+            )
+        })
+        .to_string();
     assert_eq!(result, expected_result);
 
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "another nice string", "another nice string", "another nice string","cake!","cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
@@ -663,9 +684,16 @@ fn aggregate_strings_in_array() {
                            var x=[R[0],R[0],R[1],R[1],R[1],R[1],R[2],R[2],R[0],R[2],\
                            R[2],R[2]]";
 
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|c| aggregate_strings_into_array_with_separation(c, "R", Token::Char(ReservedChar::Backline)))
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|c| {
+            aggregate_strings_into_array_with_separation(
+                c,
+                "R",
+                Token::Char(ReservedChar::Backline),
+            )
+        })
+        .to_string();
     assert_eq!(result, expected_result);
 }
 
@@ -674,27 +702,41 @@ fn aggregate_strings_in_array_filter() {
     let source = r#"var searchIndex = {};searchIndex['duplicate_paths'] = {'aaaaaaaa': 'bbbbbbbb', 'bbbbbbbb': 'aaaaaaaa', 'duplicate_paths': 'aaaaaaaa'};"#;
     let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],'duplicate_paths':R[1]}";
 
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|c| aggregate_strings_into_array_with_separation_filter(c, "R", Token::Char(ReservedChar::Backline), |tokens, pos| {
-                                              pos < 2 ||
-                                              !tokens[pos - 1].eq_char(ReservedChar::OpenBracket) ||
-                                              tokens[pos - 2].get_other() != Some("searchIndex")
-                                          }
-                                      ))
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|c| {
+            aggregate_strings_into_array_with_separation_filter(
+                c,
+                "R",
+                Token::Char(ReservedChar::Backline),
+                |tokens, pos| {
+                    pos < 2
+                        || !tokens[pos - 1].eq_char(ReservedChar::OpenBracket)
+                        || tokens[pos - 2].get_other() != Some("searchIndex")
+                },
+            )
+        })
+        .to_string();
     assert_eq!(result, expected_result);
 
     let source = r#"var searchIndex = {};searchIndex['duplicate_paths'] = {'aaaaaaaa': 'bbbbbbbb', 'bbbbbbbb': 'aaaaaaaa', 'duplicate_paths': 'aaaaaaaa', 'x': 'duplicate_paths'};"#;
     let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\",\"duplicate_paths\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],R[2]:R[1],'x':R[2]}";
 
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|c| aggregate_strings_into_array_with_separation_filter(c, "R", Token::Char(ReservedChar::Backline), |tokens, pos| {
-                                              pos < 2 ||
-                                              !tokens[pos - 1].eq_char(ReservedChar::OpenBracket) ||
-                                              tokens[pos - 2].get_other() != Some("searchIndex")
-                                          }
-                                      ))
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|c| {
+            aggregate_strings_into_array_with_separation_filter(
+                c,
+                "R",
+                Token::Char(ReservedChar::Backline),
+                |tokens, pos| {
+                    pos < 2
+                        || !tokens[pos - 1].eq_char(ReservedChar::OpenBracket)
+                        || tokens[pos - 2].get_other() != Some("searchIndex")
+                },
+            )
+        })
+        .to_string();
     assert_eq!(result, expected_result);
 }
 
@@ -705,9 +747,10 @@ fn aggregate_strings_in_array_existing() {
     let expected_result = "var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|c| aggregate_strings_into_array(c, "R"))
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|c| aggregate_strings_into_array(c, "R"))
+        .to_string();
     assert_eq!(result, expected_result);
 
     let source = r#"var R=["a nice string"];var x = ["a nice string", "a nice string", "another nice string", "cake!",
@@ -715,9 +758,10 @@ fn aggregate_strings_in_array_existing() {
     let expected_result = "var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|c| aggregate_strings_into_array(c, "R"))
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|c| aggregate_strings_into_array(c, "R"))
+        .to_string();
     assert_eq!(result, expected_result);
 
     let source = r#"var y = 12;var R=["a nice string"];var x = ["a nice string", "a nice string", "another nice string", "cake!",
@@ -725,9 +769,10 @@ fn aggregate_strings_in_array_existing() {
     let expected_result = "var y=12;var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|c| aggregate_strings_into_array(c, "R"))
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|c| aggregate_strings_into_array(c, "R"))
+        .to_string();
     assert_eq!(result, expected_result);
 
     let source = r#"var R=["osef1", "o2", "damn"];
@@ -736,9 +781,10 @@ fn aggregate_strings_in_array_existing() {
     let expected_result = "var R=[\"osef1\",\"o2\",\"damn\",\"a nice string\",\"cake!\"];\
                            var x=[R[3],R[3],\"another nice string\",R[4],R[4],R[3],R[4],R[4],R[4]]";
 
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|c| aggregate_strings_into_array(c, "R"))
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|c| aggregate_strings_into_array(c, "R"))
+        .to_string();
     assert_eq!(result, expected_result);
 }
 
@@ -749,9 +795,10 @@ fn string_duplicates() {
     let expected_result = "var r_aa=\"a nice string\",r_ba=\"cake!\";var x=[r_aa,r_aa,\
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba]";
 
-    let result = simple_minify(source).apply(aggregate_strings)
-                                      .apply(::js::clean_tokens)
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(aggregate_strings)
+        .apply(::js::clean_tokens)
+        .to_string();
     assert_eq!(result, expected_result);
 }
 
@@ -763,9 +810,10 @@ fn already_existing_var() {
     let expected_result = "var r_ba=\"cake!\";var r_aa=\"a nice string\";var x=[r_aa,r_aa,\
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba]";
 
-    let result = simple_minify(source).apply(aggregate_strings)
-                                      .apply(::js::clean_tokens)
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(aggregate_strings)
+        .apply(::js::clean_tokens)
+        .to_string();
     assert_eq!(result, expected_result);
 }
 
@@ -777,9 +825,10 @@ fn string_duplicates_variables_already_exist() {
                            var r_aa=1;var x=[r_ba,r_ba,\
                            \"another nice string\",r_ca,r_ca,r_ba,r_ca,r_ca,r_ca]";
 
-    let result = simple_minify(source).apply(aggregate_strings)
-                                      .apply(::js::clean_tokens)
-                                      .to_string();
+    let result = simple_minify(source)
+        .apply(aggregate_strings)
+        .apply(::js::clean_tokens)
+        .to_string();
     assert_eq!(result, expected_result);
 }
 
@@ -791,10 +840,10 @@ fn string_duplicates_with_separator() {
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var r_aa=\"a nice string\",r_ba=\"cake!\";\nvar x=[r_aa,r_aa,\
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba]";
-    let result = simple_minify(source).apply(::js::clean_tokens)
-                                      .apply(|f| {
-                     aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline))
-                 }).to_string();
+    let result = simple_minify(source)
+        .apply(::js::clean_tokens)
+        .apply(|f| aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline)))
+        .to_string();
     assert_eq!(result, expected_result);
 }
 
@@ -809,11 +858,9 @@ var z = "ok!";"#;
 var y="salut";
 var z="ok!""#;
 
-    let result = simple_minify(source).apply(|f| {
-                     ::js::clean_tokens_except(f, |c| {
-                         c.get_char() != Some(ReservedChar::Backline)
-                     })
-                 }).to_string();
+    let result = simple_minify(source)
+        .apply(|f| ::js::clean_tokens_except(f, |c| c.get_char() != Some(ReservedChar::Backline)))
+        .to_string();
     assert_eq!(result, expected);
 }
 
@@ -824,12 +871,14 @@ fn clean_except2() {
     let source = "let x = [ 1, 2, \t3];";
     let expected = "let x = [ 1, 2, 3];";
 
-    let result = simple_minify(source).apply(|f| {
-                     ::js::clean_tokens_except(f, |c| {
-                         c.get_char() != Some(ReservedChar::Space) &&
-                         c.get_char() != Some(ReservedChar::SemiColon)
-                     })
-                 }).to_string();
+    let result = simple_minify(source)
+        .apply(|f| {
+            ::js::clean_tokens_except(f, |c| {
+                c.get_char() != Some(ReservedChar::Space)
+                    && c.get_char() != Some(ReservedChar::SemiColon)
+            })
+        })
+        .to_string();
     assert_eq!(result, expected);
 }
 
@@ -840,12 +889,14 @@ fn clean_except3() {
     let source = "let x = [ 1, 2, \t3];";
     let expected = "let x=[1,2,\t3];";
 
-    let result = simple_minify(source).apply(|f| {
-                     ::js::clean_tokens_except(f, |c| {
-                         c.get_char() != Some(ReservedChar::Tab) &&
-                         c.get_char() != Some(ReservedChar::SemiColon)
-                     })
-                 }).to_string();
+    let result = simple_minify(source)
+        .apply(|f| {
+            ::js::clean_tokens_except(f, |c| {
+                c.get_char() != Some(ReservedChar::Tab)
+                    && c.get_char() != Some(ReservedChar::SemiColon)
+            })
+        })
+        .to_string();
     assert_eq!(result, expected);
 }
 
@@ -854,18 +905,22 @@ fn name_generator() {
     let s = ::std::iter::repeat('a').take(36).collect::<String>();
     // We need to generate enough long strings to reach the point that the name generator
     // generates names with 3 characters.
-    let s = ::std::iter::repeat(s).take(20000)
-                                  .enumerate()
-                                  .map(|(pos, s)| format!("{}{}", s, pos))
-                                  .collect::<Vec<_>>();
-    let source = format!("var x = [{}];",
-                         s.iter()
-                          .map(|s| format!("\"{0}\",\"{0}\"", s))
-                          .collect::<Vec<_>>()
-                          .join(","));
-    let result = simple_minify(&source).apply(::js::clean_tokens)
-                                       .apply(aggregate_strings)
-                                       .to_string();
+    let s = ::std::iter::repeat(s)
+        .take(20000)
+        .enumerate()
+        .map(|(pos, s)| format!("{}{}", s, pos))
+        .collect::<Vec<_>>();
+    let source = format!(
+        "var x = [{}];",
+        s.iter()
+            .map(|s| format!("\"{0}\",\"{0}\"", s))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    let result = simple_minify(&source)
+        .apply(::js::clean_tokens)
+        .apply(aggregate_strings)
+        .to_string();
     assert!(result.find(",r_aaa=").is_some());
     assert!(result.find(",r_ab=").unwrap() < result.find(",r_ba=").unwrap());
 }

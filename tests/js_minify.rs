@@ -26,9 +26,11 @@ fn compare_strs(minified: &str, str2: &str) {
         match (it1.next(), it2.next()) {
             (Some((pos, c1)), Some((_, c2))) => {
                 if c1 != c2 {
-                    println!("{}\n==== differs from: ====\n{}",
-                             &minified[get_ranges(pos, minified)],
-                             &str2[get_ranges(pos, str2)]);
+                    println!(
+                        "{}\n==== differs from: ====\n{}",
+                        &minified[get_ranges(pos, minified)],
+                        &str2[get_ranges(pos, str2)]
+                    );
                     panic!("Chars differ");
                 }
             }

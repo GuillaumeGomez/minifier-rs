@@ -25,21 +25,17 @@ impl<I: Iterator, P> JsonMultiFilter<I, P> {
 impl<I: Iterator + fmt::Debug, P> fmt::Debug for JsonMultiFilter<I, P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Filter")
-         .field("minifier", &self.minifier)
-         .field("iter", &self.iter)
-         .field("initialized", &self.initialized)
-         .finish()
+            .field("minifier", &self.minifier)
+            .field("iter", &self.iter)
+            .field("initialized", &self.initialized)
+            .finish()
     }
 }
 
 impl<I, P> Iterator for JsonMultiFilter<I, P>
-    where
-        I: Iterator,
-        P: FnMut(
-            &mut JsonMinifier,
-            &I::Item,
-            Option<&I::Item>,
-        ) -> bool,
+where
+    I: Iterator,
+    P: FnMut(&mut JsonMinifier, &I::Item, Option<&I::Item>) -> bool,
 {
     type Item = I::Item;
 
@@ -52,11 +48,7 @@ impl<I, P> Iterator for JsonMultiFilter<I, P>
 
         while let Some(item) = self.item1.take() {
             self.item1 = self.iter.next();
-            if (self.predicate)(
-                &mut self.minifier,
-                &item,
-                self.item1.as_ref(),
-            ) {
+            if (self.predicate)(&mut self.minifier, &item, self.item1.as_ref()) {
                 return Some(item);
             }
         }

@@ -1,4 +1,8 @@
-use json::{json_minifier::{JsonMinifier, keep_element}, read::json_read::JsonRead, string::JsonMultiFilter};
+use json::{
+    json_minifier::{keep_element, JsonMinifier},
+    read::json_read::JsonRead,
+    string::JsonMultiFilter,
+};
 use std::io::Read;
 
 mod read {
@@ -11,11 +15,7 @@ mod read {
 mod json_minifier;
 mod string;
 
-type JsonMethod = fn(
-    &mut JsonMinifier,
-    &char,
-    Option<&char>,
-) -> bool;
+type JsonMethod = fn(&mut JsonMinifier, &char, Option<&char>) -> bool;
 
 /// Minifies a given String by JSON minification rules
 ///
@@ -39,7 +39,6 @@ type JsonMethod = fn(
 pub fn minify(json: &str) -> String {
     JsonMultiFilter::new(json.chars(), keep_element).collect()
 }
-
 
 /// Minifies a given Read by JSON minification rules
 ///
@@ -91,7 +90,8 @@ fn removal_of_whitespace_outside_of_tags() {
               "test2": "",
               "test3": " "
             }
-        "#.into();
+        "#
+    .into();
     let expected: String = "{\"test\":\"\\\" test2\",\"test2\":\"\",\"test3\":\" \"}".into();
     let actual = minify(input);
     assert_eq!(actual, expected);

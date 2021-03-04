@@ -157,7 +157,6 @@ impl fmt::Display for AtRule {
     }
 }*/
 
-
 /// Minifies a given CSS source code.
 ///
 /// # Example

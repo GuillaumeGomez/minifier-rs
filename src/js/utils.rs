@@ -52,20 +52,24 @@ impl<'a> VariableNameGenerator<'a> {
 
     pub(crate) fn to_string(&self) -> String {
         if let Some(ref lower) = self.lower {
-            format!("{}{}{}",
-                    match self.prepend {
-                        Some(ref p) => p,
-                        None => "",
-                    },
-                    self.letter,
-                    lower.to_string())
+            format!(
+                "{}{}{}",
+                match self.prepend {
+                    Some(ref p) => p,
+                    None => "",
+                },
+                self.letter,
+                lower.to_string()
+            )
         } else {
-            format!("{}{}",
-                    match self.prepend {
-                        Some(ref p) => p,
-                        None => "",
-                    },
-                    self.letter)
+            format!(
+                "{}{}",
+                match self.prepend {
+                    Some(ref p) => p,
+                    None => "",
+                },
+                self.letter
+            )
         }
     }
 
@@ -75,10 +79,11 @@ impl<'a> VariableNameGenerator<'a> {
             Some(ref s) => s.len(),
             None => 0,
         } + 1;
-        first + match self.lower {
-            Some(ref s) => s.len(),
-            None => 0,
-        }
+        first
+            + match self.lower {
+                Some(ref s) => s.len(),
+                None => 0,
+            }
     }
 
     pub(crate) fn incr_letters(&mut self) {
@@ -208,8 +213,7 @@ pub fn get_variable_name_and_value_positions<'a>(
     }
     let mut tmp = pos;
     match tokens[pos] {
-        Token::Keyword(Keyword::Let) |
-        Token::Keyword(Keyword::Var) => {
+        Token::Keyword(Keyword::Let) | Token::Keyword(Keyword::Var) => {
             tmp += 1;
         }
         Token::Other(_) if pos > 0 => {
@@ -217,9 +221,10 @@ pub fn get_variable_name_and_value_positions<'a>(
             while pos > 0 {
                 if tokens[pos].is_comment() || tokens[pos].is_white_character() {
                     pos -= 1;
-                } else if tokens[pos] == Token::Char(ReservedChar::Comma) ||
-                          tokens[pos] == Token::Keyword(Keyword::Let) ||
-                          tokens[pos] == Token::Keyword(Keyword::Var) {
+                } else if tokens[pos] == Token::Char(ReservedChar::Comma)
+                    || tokens[pos] == Token::Keyword(Keyword::Let)
+                    || tokens[pos] == Token::Keyword(Keyword::Var)
+                {
                     break;
                 } else {
                     return None;
@@ -236,11 +241,14 @@ pub fn get_variable_name_and_value_positions<'a>(
                     tmp2 += 1;
                     while tmp2 < tokens.len() {
                         let token = &tokens[tmp2];
-                        if token.is_string() || token.is_other() || token.is_regex() ||
-                           token.is_number() || token.is_floating_number() {
+                        if token.is_string()
+                            || token.is_other()
+                            || token.is_regex()
+                            || token.is_number()
+                            || token.is_floating_number()
+                        {
                             return Some((tmp, Some(tmp2)));
-                        } else if !tokens[tmp2].is_comment() &&
-                                  !tokens[tmp2].is_white_character() {
+                        } else if !tokens[tmp2].is_comment() && !tokens[tmp2].is_white_character() {
                             break;
                         }
                         tmp2 += 1;
@@ -251,9 +259,10 @@ pub fn get_variable_name_and_value_positions<'a>(
                     _ => false,
                 } {
                     return Some((tmp, None));
-                } else if !tokens[tmp2].is_comment() &&
-                          !(tokens[tmp2].is_white_character() &&
-                            tokens[tmp2].get_char() != Some(ReservedChar::Backline)) {
+                } else if !tokens[tmp2].is_comment()
+                    && !(tokens[tmp2].is_white_character()
+                        && tokens[tmp2].get_char() != Some(ReservedChar::Backline))
+                {
                     break;
                 }
                 tmp2 += 1;
@@ -270,7 +279,7 @@ pub fn get_variable_name_and_value_positions<'a>(
 fn get_next<'a>(it: &mut IntoIter<Token<'a>>) -> Option<Token<'a>> {
     while let Some(t) = it.next() {
         if t.is_comment() || t.is_white_character() {
-            continue
+            continue;
         }
         return Some(t);
     }
@@ -307,10 +316,10 @@ pub fn clean_tokens<'a>(tokens: Tokens<'a>) -> Tokens<'a> {
         }
         let token = token.unwrap();
         if token.is_white_character() {
-            continue
+            continue;
         } else if token.get_char() == Some(ReservedChar::SemiColon) {
             if v.is_empty() {
-                continue
+                continue;
             }
             if let Some(next) = get_next(&mut it) {
                 if next != Token::Char(ReservedChar::CloseCurlyBrace) {
@@ -318,7 +327,7 @@ pub fn clean_tokens<'a>(tokens: Tokens<'a>) -> Tokens<'a> {
                 }
                 v.push(next);
             }
-            continue
+            continue;
         }
         v.push(token);
     }
@@ -331,9 +340,9 @@ pub fn clean_tokens<'a>(tokens: Tokens<'a>) -> Tokens<'a> {
 pub fn clean_token(token: &Token<'_>, next_token: &Option<&Token<'_>>) -> bool {
     !token.is_comment() && {
         if let Some(x) = token.get_char() {
-            !x.is_white_character() &&
-            (x != ReservedChar::SemiColon ||
-             *next_token != Some(&Token::Char(ReservedChar::CloseCurlyBrace)))
+            !x.is_white_character()
+                && (x != ReservedChar::SemiColon
+                    || *next_token != Some(&Token::Char(ReservedChar::CloseCurlyBrace)))
         } else {
             true
         }
@@ -347,7 +356,7 @@ fn get_next_except<'a, F: Fn(&Token<'a>) -> bool>(
 ) -> Option<Token<'a>> {
     while let Some(t) = it.next() {
         if (t.is_comment() || t.is_white_character()) && f(&t) {
-            continue
+            continue;
         }
         return Some(t);
     }
@@ -379,10 +388,7 @@ fn get_next_except<'a, F: Fn(&Token<'a>) -> bool>(
 /// }
 /// ```
 #[inline]
-pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
-    tokens: Tokens<'a>,
-    f: F,
-) -> Tokens<'a> {
+pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(tokens: Tokens<'a>, f: F) -> Tokens<'a> {
     let mut v = Vec::with_capacity(tokens.len() / 3 * 2);
     let mut it = tokens.0.into_iter();
 
@@ -394,14 +400,14 @@ pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
         let token = token.unwrap();
         if token.is_white_character() {
             if f(&token) {
-                continue
+                continue;
             }
         } else if token.get_char() == Some(ReservedChar::SemiColon) {
             if v.is_empty() {
                 if !f(&token) {
                     v.push(token);
                 }
-                continue
+                continue;
             }
             if let Some(next) = get_next_except(&mut it, &f) {
                 if next != Token::Char(ReservedChar::CloseCurlyBrace) || !f(&token) {
@@ -411,7 +417,7 @@ pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(
             } else if !f(&token) {
                 v.push(token);
             }
-            continue
+            continue;
         }
         v.push(token);
     }
@@ -490,8 +496,7 @@ pub(crate) fn get_array<'a>(
             }
         } else {
             match tokens[pos] {
-                Token::Keyword(Keyword::Let) |
-                Token::Keyword(Keyword::Var) => {
+                Token::Keyword(Keyword::Let) | Token::Keyword(Keyword::Var) => {
                     looking_for_var = true;
                 }
                 _ => {}
@@ -589,16 +594,16 @@ var n = null;
     let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
 
     let res: Tokens = ::js::simple_minify(source)
-                           .into_iter()
-                           .filter(|(x, next)| ::js::clean_token(x, next))
-                           .map(|(t, _)| {
-                               if t == Token::Keyword(Keyword::Null) {
-                                   Token::Other("N")
-                               } else {
-                                   t
-                               }
-                           })
-                           .collect::<Vec<_>>()
-                           .into();
+        .into_iter()
+        .filter(|(x, next)| ::js::clean_token(x, next))
+        .map(|(t, _)| {
+            if t == Token::Keyword(Keyword::Null) {
+                Token::Other("N")
+            } else {
+                t
+            }
+        })
+        .collect::<Vec<_>>()
+        .into();
     assert_eq!(res.to_string(), expected_result);
 }
