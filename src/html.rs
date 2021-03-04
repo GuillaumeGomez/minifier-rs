@@ -40,17 +40,44 @@ fn condense(source: &str) -> String {
     let type_reg = Regex::new(r#"\s*?type="[\w|\s].*?""#).unwrap();
     re.replace_all(source, |caps: &Captures| {
         type_reg.replace_all(&caps[0], "").into_owned()
-    }).into_owned()
+    })
+    .into_owned()
 }
 
 fn clean_unneeded_tags(source: &str) -> String {
-    let useless_tags = ["</area>", "</base>", "<body>", "</body>", "</br>",
-                        "</col>", "</colgroup>", "</dd>", "</dt>", "<head>",
-                        "</head>", "</hr>", "<html>", "</html>", "</img>",
-                        "</input>", "</li>", "</link>", "</meta>", "</option>",
-                        "</param>", "<tbody>", "</tbody>", "</td>", "</tfoot>",
-                        "</th>", "</thead>", "</tr>", "</basefont>",
-                        "</isindex>", "</param>"];
+    let useless_tags = [
+        "</area>",
+        "</base>",
+        "<body>",
+        "</body>",
+        "</br>",
+        "</col>",
+        "</colgroup>",
+        "</dd>",
+        "</dt>",
+        "<head>",
+        "</head>",
+        "</hr>",
+        "<html>",
+        "</html>",
+        "</img>",
+        "</input>",
+        "</li>",
+        "</link>",
+        "</meta>",
+        "</option>",
+        "</param>",
+        "<tbody>",
+        "</tbody>",
+        "</td>",
+        "</tfoot>",
+        "</th>",
+        "</thead>",
+        "</tr>",
+        "</basefont>",
+        "</isindex>",
+        "</param>",
+    ];
     let mut res = source.to_owned();
     for useless_tag in &useless_tags {
         res = res.replace(useless_tag, "");
@@ -67,7 +94,8 @@ fn remove_comments(source: &str) -> String {
         } else {
             " ".to_owned()
         }
-    }).into_owned()
+    })
+    .into_owned()
 }
 
 fn unquote_attributes(source: &str) -> String {
@@ -81,52 +109,63 @@ fn unquote_attributes(source: &str) -> String {
     let extra_spaces3 = Regex::new(r"\d\s+>").unwrap();
     let quotes_in_tag = Regex::new(r##"([a-zA-Z]+)="([a-zA-Z0-9-_\.]+)""##).unwrap();
 
-    any_tag.replace_all(source, |caps: &Captures| {
-        let cap = format!("{}", &caps[0]);
-        if cap.starts_with("<!") || cap.find("</").is_some() {
-            cap
-        } else {
-            let tag = spaces_before_close.replace_all(&cap, "\">").into_owned();
-            let mut tag = spaces_before_close2.replace_all(&tag, "'>").into_owned();
-            let tag_c = tag.clone();
-
-            let space1_matches: Vec<_> = between_words.find_iter(&tag_c).collect();
-            let space6_matches: Vec<_> = extra_spaces3.find_iter(&tag_c).collect();
-            let mut pos = 0;
-            loop {
-                let replacement = match (space1_matches.get(pos), space6_matches.get(pos)) {
-                    (Some(a), Some(b)) => format!("{}{}", a.as_str(), b.as_str()),
-                    (None, Some(b)) => format!("{}", b.as_str()),
-                    (Some(a), None) => format!("{}", a.as_str()),
-                    _ => break,
-                };
-                pos += 1;
-                tag = tag.replace(&replacement,
-                                  &extra_spaces.replace_all(&replacement, " ").into_owned());
-            }
-            let mut output = tag.clone();
-            for caps in extra_spaces2.find_iter(&tag) {
-                let c = caps.as_str().chars().next().unwrap_or('\0');
-                output = output.replace(caps.as_str(),
-                                        &format!("{} {}",
-                                                 if c == '\0' { String::new() }
-                                                 else { format!("{}", c) },
-                                                 caps.as_str()[1..].trim_left()));
-            }
-            tag = quotes_in_tag.replace_all(&output, |caps: &Captures| {
-                match &caps[1] {
-                    "width" | "height" => format!("{}={}", &caps[1], &caps[2]),
-                    x => format!("{}=\"{}\"", x, &caps[2]),
-                }
-            }).into_owned();
-            if cap != tag {
-                tag
-            } else {
+    any_tag
+        .replace_all(source, |caps: &Captures| {
+            let cap = format!("{}", &caps[0]);
+            if cap.starts_with("<!") || cap.find("</").is_some() {
                 cap
+            } else {
+                let tag = spaces_before_close.replace_all(&cap, "\">").into_owned();
+                let mut tag = spaces_before_close2.replace_all(&tag, "'>").into_owned();
+                let tag_c = tag.clone();
+
+                let space1_matches: Vec<_> = between_words.find_iter(&tag_c).collect();
+                let space6_matches: Vec<_> = extra_spaces3.find_iter(&tag_c).collect();
+                let mut pos = 0;
+                loop {
+                    let replacement = match (space1_matches.get(pos), space6_matches.get(pos)) {
+                        (Some(a), Some(b)) => format!("{}{}", a.as_str(), b.as_str()),
+                        (None, Some(b)) => format!("{}", b.as_str()),
+                        (Some(a), None) => format!("{}", a.as_str()),
+                        _ => break,
+                    };
+                    pos += 1;
+                    tag = tag.replace(
+                        &replacement,
+                        &extra_spaces.replace_all(&replacement, " ").into_owned(),
+                    );
+                }
+                let mut output = tag.clone();
+                for caps in extra_spaces2.find_iter(&tag) {
+                    let c = caps.as_str().chars().next().unwrap_or('\0');
+                    output = output.replace(
+                        caps.as_str(),
+                        &format!(
+                            "{} {}",
+                            if c == '\0' {
+                                String::new()
+                            } else {
+                                format!("{}", c)
+                            },
+                            caps.as_str()[1..].trim_left()
+                        ),
+                    );
+                }
+                tag = quotes_in_tag
+                    .replace_all(&output, |caps: &Captures| match &caps[1] {
+                        "width" | "height" => format!("{}={}", &caps[1], &caps[2]),
+                        x => format!("{}=\"{}\"", x, &caps[2]),
+                    })
+                    .into_owned();
+                if cap != tag {
+                    tag
+                } else {
+                    cap
+                }
             }
-        }
-    }).trim()
-      .to_owned()
+        })
+        .trim()
+        .to_owned()
 }
 
 /// Returns a minified version of the provided HTML source.
@@ -206,7 +245,8 @@ fn html_keep_important_comments() {
 </div>
 "#;
 
-    let expected_result = "<div> <div>content</div> <!--[if lte IE 8]> <div class=\"warning\">This \
+    let expected_result =
+        "<div> <div>content</div> <!--[if lte IE 8]> <div class=\"warning\">This \
                            old browser is unsupported and will most likely display funky things. \
                            </div> <![endif]--> </div>";
     assert_eq!(minify(source), expected_result);

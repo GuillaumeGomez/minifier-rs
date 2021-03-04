@@ -1,5 +1,9 @@
 use json::read::internal_reader::InternalReader;
-use std::{error, fmt, io::{Error, Read}, str::from_utf8};
+use std::{
+    error, fmt,
+    io::{Error, Read},
+    str::from_utf8,
+};
 
 pub struct ByteToChar<R> {
     iter: InternalReader<R>,
@@ -18,17 +22,15 @@ impl<R: Read> ByteToChar<R> {
             None => Ok(None),
             Some(item) => match item {
                 Ok(item) => Ok(Some(item)),
-                Err(err) => Err(CharsError::Other(err))
-            }
+                Err(err) => Err(CharsError::Other(err)),
+            },
         }
     }
 }
 
 impl<R: Read + fmt::Debug> fmt::Debug for ByteToChar<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Filter")
-         .field("iter", &self.iter)
-         .finish()
+        f.debug_struct("Filter").field("iter", &self.iter).finish()
     }
 }
 
@@ -42,7 +44,7 @@ impl<R: Read> Iterator for ByteToChar<R> {
             Ok(item) => match item {
                 Some(item) => item,
                 None => return None,
-            }
+            },
         };
 
         let width = utf8_char_width(first_byte);
@@ -61,7 +63,7 @@ impl<R: Read> Iterator for ByteToChar<R> {
                     Ok(item) => match item {
                         Some(item) => item,
                         None => return Some(Err(CharsError::NotUtf8)),
-                    }
+                    },
                 };
                 buf[start] = byte;
                 start += 1;
@@ -111,12 +113,6 @@ pub enum CharsError {
 }
 
 impl error::Error for CharsError {
-    fn description(&self) -> &str {
-        match *self {
-            CharsError::NotUtf8 => "invalid utf8 encoding",
-            CharsError::Other(ref e) => Error::description(e),
-        }
-    }
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             CharsError::NotUtf8 => None,

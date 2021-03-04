@@ -20,11 +20,7 @@ impl JsonMinifier {
 }
 
 #[inline]
-pub fn keep_element(
-    minifier: &mut JsonMinifier,
-    item1: &char,
-    item2: Option<&char>,
-) -> bool {
+pub fn keep_element(minifier: &mut JsonMinifier, item1: &char, item2: Option<&char>) -> bool {
     let remove_element =
         item1.is_ascii_control() || is_whitespace_outside_string(minifier, item1, item2);
     !remove_element

@@ -33,7 +33,7 @@ impl Buffer {
         }
         let item = self.buffer.get(self.read_pos);
         self.read_pos += 1;
-        item.and_then(|test|Some(*test))
+        item.copied()
     }
 
     pub fn cont(&self) -> bool {

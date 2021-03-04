@@ -31,11 +31,13 @@ use std::path::{Path, PathBuf};
 use minifier::{css, js, json};
 
 fn print_help() {
-    println!(r##"For now, this minifier supports the following type of files:
+    println!(
+        r##"For now, this minifier supports the following type of files:
 
  * .css
  * .js
- * .json"##);
+ * .json"##
+    );
 }
 
 pub fn get_all_data(file_path: &str) -> io::Result<String> {
@@ -47,29 +49,43 @@ pub fn get_all_data(file_path: &str) -> io::Result<String> {
 }
 
 fn call_minifier<F>(file_path: &str, func: F)
-    where F: Fn(&str) -> String {
+where
+    F: Fn(&str) -> String,
+{
     match get_all_data(file_path) {
         Ok(content) => {
             let mut out = PathBuf::from(file_path);
-            let original_extension = out.extension()
-                                        .unwrap_or(OsStr::new(""))
-                                        .to_str()
-                                        .unwrap_or("")
-                                        .to_owned();
+            let original_extension = out
+                .extension()
+                .unwrap_or_else(|| OsStr::new(""))
+                .to_str()
+                .unwrap_or("")
+                .to_owned();
             out.set_extension(format!("min.{}", original_extension));
-            if let Ok(mut file) = OpenOptions::new().truncate(true)
-                                                    .write(true)
-                                                    .create(true)
-                                                    .open(out.clone()) {
+            if let Ok(mut file) = OpenOptions::new()
+                .truncate(true)
+                .write(true)
+                .create(true)
+                .open(out.clone())
+            {
                 if let Err(e) = write!(file, "{}", func(&content)) {
-                    writeln!(&mut io::stderr(),
-                             "Impossible to write into {:?}: {}", out, e).unwrap();
+                    writeln!(
+                        &mut io::stderr(),
+                        "Impossible to write into {:?}: {}",
+                        out,
+                        e
+                    )
+                    .unwrap();
                 } else {
                     println!("{:?}: done -> generated into {:?}", file_path, out);
                 }
             } else {
-                writeln!(&mut io::stderr(),
-                         "Impossible to create new file: {:?}", out).unwrap();
+                writeln!(
+                    &mut io::stderr(),
+                    "Impossible to create new file: {:?}",
+                    out
+                )
+                .unwrap();
             }
         }
         Err(e) => writeln!(&mut io::stderr(), "\"{}\": {}", file_path, e).unwrap(),
@@ -82,20 +98,25 @@ fn main() {
     if args.is_empty() {
         println!("Missing files to work on...\nExample: ./minifier file.js\n");
         print_help();
-        return
+        return;
     }
     for arg in &args {
         let p = Path::new(arg);
 
         if !p.is_file() {
             writeln!(&mut io::stderr(), "\"{}\" isn't a file", arg).unwrap();
-            continue
+            continue;
         }
-        match p.extension().unwrap_or(OsStr::new("")).to_str().unwrap_or("") {
-	    "css" => call_minifier(arg, |s| css::minify(s).expect("css minification failed")),
+        match p
+            .extension()
+            .unwrap_or_else(|| OsStr::new(""))
+            .to_str()
+            .unwrap_or("")
+        {
+            "css" => call_minifier(arg, |s| css::minify(s).expect("css minification failed")),
             "js" => call_minifier(arg, js::minify),
-	    "json" => call_minifier(arg, json::minify),
-	    // "html" | "htm" => call_minifier(arg, html::minify),
+            "json" => call_minifier(arg, json::minify),
+            // "html" | "htm" => call_minifier(arg, html::minify),
             x => println!("\"{}\": this format isn't supported", x),
         }
     }

@@ -58,32 +58,35 @@ pub enum ReservedChar {
 
 impl fmt::Display for ReservedChar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}",
-               match *self {
-                   ReservedChar::Comma           => ',',
-                   ReservedChar::OpenParenthese  => '(',
-                   ReservedChar::CloseParenthese => ')',
-                   ReservedChar::OpenCurlyBrace  => '{',
-                   ReservedChar::CloseCurlyBrace => '}',
-                   ReservedChar::OpenBracket     => '[',
-                   ReservedChar::CloseBracket    => ']',
-                   ReservedChar::Colon           => ':',
-                   ReservedChar::SemiColon       => ';',
-                   ReservedChar::Slash           => '/',
-                   ReservedChar::Star            => '*',
-                   ReservedChar::Plus            => '+',
-                   ReservedChar::EqualSign       => '=',
-                   ReservedChar::Space           => ' ',
-                   ReservedChar::Tab             => '\t',
-                   ReservedChar::Backline        => '\n',
-                   ReservedChar::SuperiorThan    => '>',
-                   ReservedChar::Quote           => '\'',
-                   ReservedChar::DoubleQuote     => '"',
-                   ReservedChar::Pipe            => '|',
-                   ReservedChar::Tilde           => '~',
-                   ReservedChar::Dollar          => '$',
-                   ReservedChar::Circumflex      => '^',
-               })
+        write!(
+            f,
+            "{}",
+            match *self {
+                ReservedChar::Comma => ',',
+                ReservedChar::OpenParenthese => '(',
+                ReservedChar::CloseParenthese => ')',
+                ReservedChar::OpenCurlyBrace => '{',
+                ReservedChar::CloseCurlyBrace => '}',
+                ReservedChar::OpenBracket => '[',
+                ReservedChar::CloseBracket => ']',
+                ReservedChar::Colon => ':',
+                ReservedChar::SemiColon => ';',
+                ReservedChar::Slash => '/',
+                ReservedChar::Star => '*',
+                ReservedChar::Plus => '+',
+                ReservedChar::EqualSign => '=',
+                ReservedChar::Space => ' ',
+                ReservedChar::Tab => '\t',
+                ReservedChar::Backline => '\n',
+                ReservedChar::SuperiorThan => '>',
+                ReservedChar::Quote => '\'',
+                ReservedChar::DoubleQuote => '"',
+                ReservedChar::Pipe => '|',
+                ReservedChar::Tilde => '~',
+                ReservedChar::Dollar => '$',
+                ReservedChar::Circumflex => '^',
+            }
+        )
     }
 }
 
@@ -93,39 +96,38 @@ impl MyTryFrom<char> for ReservedChar {
     fn try_from(value: char) -> Result<ReservedChar, Self::Error> {
         match value {
             '\'' => Ok(ReservedChar::Quote),
-            '"'  => Ok(ReservedChar::DoubleQuote),
-            ','  => Ok(ReservedChar::Comma),
-            '('  => Ok(ReservedChar::OpenParenthese),
-            ')'  => Ok(ReservedChar::CloseParenthese),
-            '{'  => Ok(ReservedChar::OpenCurlyBrace),
-            '}'  => Ok(ReservedChar::CloseCurlyBrace),
-            '['  => Ok(ReservedChar::OpenBracket),
-            ']'  => Ok(ReservedChar::CloseBracket),
-            ':'  => Ok(ReservedChar::Colon),
-            ';'  => Ok(ReservedChar::SemiColon),
-            '/'  => Ok(ReservedChar::Slash),
-            '*'  => Ok(ReservedChar::Star),
-            '+'  => Ok(ReservedChar::Plus),
-            '='  => Ok(ReservedChar::EqualSign),
-            ' '  => Ok(ReservedChar::Space),
+            '"' => Ok(ReservedChar::DoubleQuote),
+            ',' => Ok(ReservedChar::Comma),
+            '(' => Ok(ReservedChar::OpenParenthese),
+            ')' => Ok(ReservedChar::CloseParenthese),
+            '{' => Ok(ReservedChar::OpenCurlyBrace),
+            '}' => Ok(ReservedChar::CloseCurlyBrace),
+            '[' => Ok(ReservedChar::OpenBracket),
+            ']' => Ok(ReservedChar::CloseBracket),
+            ':' => Ok(ReservedChar::Colon),
+            ';' => Ok(ReservedChar::SemiColon),
+            '/' => Ok(ReservedChar::Slash),
+            '*' => Ok(ReservedChar::Star),
+            '+' => Ok(ReservedChar::Plus),
+            '=' => Ok(ReservedChar::EqualSign),
+            ' ' => Ok(ReservedChar::Space),
             '\t' => Ok(ReservedChar::Tab),
-            '\n' |
-            '\r' => Ok(ReservedChar::Backline),
-            '>'  => Ok(ReservedChar::SuperiorThan),
-            '|'  => Ok(ReservedChar::Pipe),
-            '~'  => Ok(ReservedChar::Tilde),
-            '$'  => Ok(ReservedChar::Dollar),
-            '^'  => Ok(ReservedChar::Circumflex),
-            _    => Err("Unknown reserved char"),
+            '\n' | '\r' => Ok(ReservedChar::Backline),
+            '>' => Ok(ReservedChar::SuperiorThan),
+            '|' => Ok(ReservedChar::Pipe),
+            '~' => Ok(ReservedChar::Tilde),
+            '$' => Ok(ReservedChar::Dollar),
+            '^' => Ok(ReservedChar::Circumflex),
+            _ => Err("Unknown reserved char"),
         }
     }
 }
 
 impl ReservedChar {
     fn is_useless(&self) -> bool {
-        *self == ReservedChar::Space ||
-        *self == ReservedChar::Tab ||
-        *self == ReservedChar::Backline
+        *self == ReservedChar::Space
+            || *self == ReservedChar::Tab
+            || *self == ReservedChar::Backline
     }
 
     fn is_operator(&self) -> bool {
@@ -144,14 +146,17 @@ pub enum Operator {
 
 impl fmt::Display for Operator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}",
-               match *self {
-                   Operator::Plus           => '+',
-                   Operator::Multiply       => '*',
-                   Operator::Minus          => '-',
-                   Operator::Modulo         => '%',
-                   Operator::Divide         => '/',
-               })
+        write!(
+            f,
+            "{}",
+            match *self {
+                Operator::Plus => '+',
+                Operator::Multiply => '*',
+                Operator::Minus => '-',
+                Operator::Modulo => '%',
+                Operator::Divide => '/',
+            }
+        )
     }
 }
 
@@ -165,7 +170,7 @@ impl MyTryFrom<char> for Operator {
             '-' => Ok(Operator::Minus),
             '%' => Ok(Operator::Modulo),
             '/' => Ok(Operator::Divide),
-            _   => Err("Unknown operator"),
+            _ => Err("Unknown operator"),
         }
     }
 }
@@ -175,10 +180,10 @@ impl MyTryFrom<ReservedChar> for Operator {
 
     fn try_from(value: ReservedChar) -> Result<Operator, Self::Error> {
         match value {
-            ReservedChar::Slash  => Ok(Operator::Divide),
-            ReservedChar::Star   => Ok(Operator::Multiply),
-            ReservedChar::Plus   => Ok(Operator::Plus),
-            _                    => Err("Unknown operator"),
+            ReservedChar::Slash => Ok(Operator::Divide),
+            ReservedChar::Star => Ok(Operator::Multiply),
+            ReservedChar::Plus => Ok(Operator::Plus),
+            _ => Err("Unknown operator"),
         }
     }
 }
@@ -196,29 +201,29 @@ impl<'a> MyTryFrom<&'a str> for SelectorElement<'a> {
     type Error = &'static str;
 
     fn try_from(value: &'a str) -> Result<SelectorElement, Self::Error> {
-        if value.starts_with('.') {
-            if value.len() > 1 {
-                Ok(SelectorElement::Class(&value[1..]))
-            } else {
+        if let Some(value) = value.strip_prefix('.') {
+            if value.is_empty() {
                 Err("cannot determine selector")
+            } else {
+                Ok(SelectorElement::Class(value))
             }
-        } else if value.starts_with('#') {
-            if value.len() > 1 {
-                Ok(SelectorElement::Id(&value[1..]))
-            } else {
+        } else if let Some(value) = value.strip_prefix('#') {
+            if value.is_empty() {
                 Err("cannot determine selector")
+            } else {
+                Ok(SelectorElement::Id(value))
             }
-        } else if value.starts_with('@') {
-            if value.len() > 1 {
-                Ok(SelectorElement::Media(&value[1..]))
-            } else {
+        } else if let Some(value) = value.strip_prefix('@') {
+            if value.is_empty() {
                 Err("cannot determine selector")
+            } else {
+                Ok(SelectorElement::Media(value))
             }
-        } else if value.starts_with(':') {
-            if value.len() > 1 {
-                Ok(SelectorElement::PseudoClass(&value[1..]))
-            } else {
+        } else if let Some(value) = value.strip_prefix(':') {
+            if value.is_empty() {
                 Err("cannot determine selector")
+            } else {
+                Ok(SelectorElement::PseudoClass(value))
             }
         } else if value.chars().next().unwrap_or(' ').is_alphabetic() {
             Ok(SelectorElement::Tag(value))
@@ -257,11 +262,11 @@ pub enum SelectorOperator {
 impl fmt::Display for SelectorOperator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SelectorOperator::OneAttributeEquals => write!(f, "{}", "~="),
-            SelectorOperator::EqualsOrStartsWithFollowedByDash => write!(f, "{}", "|="),
-            SelectorOperator::EndsWith => write!(f, "{}", "$="),
-            SelectorOperator::FirstStartsWith => write!(f, "{}", "^="),
-            SelectorOperator::Contains => write!(f, "{}", "*="),
+            SelectorOperator::OneAttributeEquals => write!(f, "~="),
+            SelectorOperator::EqualsOrStartsWithFollowedByDash => write!(f, "|="),
+            SelectorOperator::EndsWith => write!(f, "$="),
+            SelectorOperator::FirstStartsWith => write!(f, "^="),
+            SelectorOperator::Contains => write!(f, "*="),
         }
     }
 }
@@ -299,17 +304,11 @@ impl<'a> fmt::Display for Token<'a> {
 
 impl<'a> Token<'a> {
     fn is_comment(&self) -> bool {
-        match *self {
-            Token::Comment(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Comment(_))
     }
 
     fn is_char(&self) -> bool {
-        match *self {
-            Token::Char(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Char(_))
     }
 
     fn get_char(&self) -> Option<ReservedChar> {
@@ -334,17 +333,11 @@ impl<'a> Token<'a> {
     }
 
     fn is_a_media(&self) -> bool {
-        match *self {
-            Token::SelectorElement(SelectorElement::Media(_)) => true,
-            _ => false,
-        }
+        matches!(*self, Token::SelectorElement(SelectorElement::Media(_)))
     }
 
     fn is_a_license(&self) -> bool {
-        match *self {
-            Token::License(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::License(_))
     }
 
     fn is_operator(&self) -> bool {
@@ -365,10 +358,13 @@ impl<'a> PartialEq<ReservedChar> for Token<'a> {
     }
 }
 
-fn get_line_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
-                        start_pos: &mut usize) -> Option<Token<'a>> {
+fn get_line_comment<'a>(
+    source: &'a str,
+    iterator: &mut Peekable<CharIndices>,
+    start_pos: &mut usize,
+) -> Option<Token<'a>> {
     *start_pos += 1;
-    while let Some((pos, c)) = iterator.next() {
+    for (pos, c) in iterator {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Backline {
                 let ret = Some(Token::Comment(&source[*start_pos..pos]));
@@ -380,8 +376,11 @@ fn get_line_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
     None
 }
 
-fn get_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
-                   start_pos: &mut usize) -> Option<Token<'a>> {
+fn get_comment<'a>(
+    source: &'a str,
+    iterator: &mut Peekable<CharIndices>,
+    start_pos: &mut usize,
+) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
     *start_pos += 1;
     let builder = if let Some((_, c)) = iterator.next() {
@@ -398,7 +397,7 @@ fn get_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
         Token::Comment
     };
 
-    while let Some((pos, c)) = iterator.next() {
+    for (pos, c) in iterator {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Slash && prev == ReservedChar::Star {
                 let ret = Some(builder(&source[*start_pos..pos - 1]));
@@ -413,13 +412,17 @@ fn get_comment<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>,
     None
 }
 
-fn get_string<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>, start_pos: &mut usize,
-                  start: ReservedChar) -> Option<Token<'a>> {
+fn get_string<'a>(
+    source: &'a str,
+    iterator: &mut Peekable<CharIndices>,
+    start_pos: &mut usize,
+    start: ReservedChar,
+) -> Option<Token<'a>> {
     while let Some((pos, c)) = iterator.next() {
         if c == '\\' {
             // we skip next character
             iterator.next();
-            continue
+            continue;
         }
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == start {
@@ -432,12 +435,19 @@ fn get_string<'a>(source: &'a str, iterator: &mut Peekable<CharIndices>, start_p
     None
 }
 
-fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: usize,
-                  is_in_block: isize, is_in_media: bool, is_in_attribute_selector: bool) {
+fn fill_other<'a>(
+    source: &'a str,
+    v: &mut Vec<Token<'a>>,
+    start: usize,
+    pos: usize,
+    is_in_block: isize,
+    is_in_media: bool,
+    is_in_attribute_selector: bool,
+) {
     if start < pos {
-        if is_in_attribute_selector == false &&
-                  ((is_in_block == 0 && is_in_media == false) ||
-                   (is_in_media == true && is_in_block == 1)) {
+        if !is_in_attribute_selector
+            && ((is_in_block == 0 && !is_in_media) || (is_in_media && is_in_block == 1))
+        {
             let mut is_pseudo_class = false;
             let mut add = 0;
             if let Some(&Token::Char(ReservedChar::Colon)) = v.last() {
@@ -451,10 +461,13 @@ fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: us
                 v.push(Token::SelectorElement(s));
             } else {
                 let s = &source[start..pos];
-                if !s.starts_with(':') && !s.starts_with('.') && !s.starts_with('#') &&
-                   !s.starts_with('@') {
+                if !s.starts_with(':')
+                    && !s.starts_with('.')
+                    && !s.starts_with('#')
+                    && !s.starts_with('@')
+                {
                     v.push(Token::Other(s));
-               }
+                }
             }
         } else {
             v.push(Token::Other(&source[start..pos]));
@@ -462,6 +475,7 @@ fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: us
     }
 }
 
+#[allow(clippy::comparison_chain)]
 pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
     let mut v = Vec::with_capacity(1000);
     let mut iterator = source.char_indices().peekable();
@@ -474,17 +488,32 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
         let (mut pos, c) = match iterator.next() {
             Some(x) => x,
             None => {
-                fill_other(source, &mut v, start, source.len(), is_in_block, is_in_media,
-                           is_in_attribute_selector);
-                break
+                fill_other(
+                    source,
+                    &mut v,
+                    start,
+                    source.len(),
+                    is_in_block,
+                    is_in_media,
+                    is_in_attribute_selector,
+                );
+                break;
             }
         };
         if let Ok(c) = ReservedChar::try_from(c) {
-            fill_other(source, &mut v, start, pos, is_in_block, is_in_media,
-                       is_in_attribute_selector);
-            is_in_media = is_in_media || v.last()
-                                          .unwrap_or(&Token::Char(ReservedChar::Space))
-                                          .is_media("media");
+            fill_other(
+                source,
+                &mut v,
+                start,
+                pos,
+                is_in_block,
+                is_in_media,
+                is_in_attribute_selector,
+            );
+            is_in_media = is_in_media
+                || v.last()
+                    .unwrap_or(&Token::Char(ReservedChar::Space))
+                    .is_media("media");
             if_match! {
                 c == ReservedChar::Quote || c == ReservedChar::DoubleQuote => {
                     if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
@@ -573,7 +602,7 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
     Ok(Tokens(clean_tokens(v)))
 }
 
-fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
+fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
     let mut i = 0;
     let mut is_in_calc = false;
     let mut paren = 0;
@@ -581,7 +610,7 @@ fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
     while i < v.len() {
         if v[i] == Token::Other("calc") {
             is_in_calc = true;
-        } else if is_in_calc == true {
+        } else if is_in_calc {
             if v[i] == Token::Char(ReservedChar::CloseParenthese) {
                 paren -= 1;
                 is_in_calc = paren != 0;
@@ -592,28 +621,30 @@ fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
 
         if v[i].is_useless() {
             if i > 0 && v[i - 1] == Token::Char(ReservedChar::CloseBracket) {
-                if i + 1 < v.len() &&
-                    (v[i + 1].is_useless() || v[i + 1] == Token::Char(ReservedChar::OpenCurlyBrace)) {
-                        v.remove(i);
-                        continue
+                if i + 1 < v.len()
+                    && (v[i + 1].is_useless()
+                        || v[i + 1] == Token::Char(ReservedChar::OpenCurlyBrace))
+                {
+                    v.remove(i);
+                    continue;
                 }
             } else if i > 0 && v[i - 1] == Token::Other("and") {
                 // retain the space after an and
-            } else if is_in_calc == false &&
-               ((i > 0 && ((v[i - 1].is_char() &&
-                           v[i - 1] != Token::Char(ReservedChar::CloseParenthese)) ||
-                          v[i - 1].is_a_media() ||
-                          v[i - 1].is_a_license())) ||
-                (i < v.len() - 1 && v[i + 1].is_char())) {
+            } else if (is_in_calc && v[i - 1].is_useless())
+                || !is_in_calc
+                    && ((i > 0
+                        && ((v[i - 1].is_char()
+                            && v[i - 1] != Token::Char(ReservedChar::CloseParenthese))
+                            || v[i - 1].is_a_media()
+                            || v[i - 1].is_a_license()))
+                        || (i < v.len() - 1 && v[i + 1].is_char()))
+            {
                 v.remove(i);
-                continue
-            } else if is_in_calc == true && v[i - 1].is_useless() {
-                v.remove(i);
-                continue
+                continue;
             }
         } else if v[i].is_comment() {
             v.remove(i);
-            continue
+            continue;
         }
         i += 1;
     }
@@ -647,43 +678,45 @@ fn css_basic() {
         display:    block;
     }
 }"#;
-    let expected = vec![Token::License(" just some license "),
-                        Token::SelectorElement(SelectorElement::Class("foo")),
-                        Token::Char(ReservedChar::SuperiorThan),
-                        Token::SelectorElement(SelectorElement::Id("bar")),
-                        Token::Char(ReservedChar::Space),
-                        Token::SelectorElement(SelectorElement::Tag("p")),
-                        Token::SelectorElement(SelectorElement::PseudoClass("hover")),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::Other("color"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("blue"),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Other("background"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::String("\"blue\""),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace),
-                        Token::SelectorElement(SelectorElement::Media("media")),
-                        Token::Other("screen"),
-                        Token::Char(ReservedChar::Space),
-                        Token::Other("and"),
-                        Token::Char(ReservedChar::Space),
-                        Token::Char(ReservedChar::OpenParenthese),
-                        Token::Other("max-width"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("640px"),
-                        Token::Char(ReservedChar::CloseParenthese),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::SelectorElement(SelectorElement::Class("block")),
-                        Token::SelectorElement(SelectorElement::PseudoClass("hover")),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::Other("display"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("block"),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace),
-                        Token::Char(ReservedChar::CloseCurlyBrace)];
+    let expected = vec![
+        Token::License(" just some license "),
+        Token::SelectorElement(SelectorElement::Class("foo")),
+        Token::Char(ReservedChar::SuperiorThan),
+        Token::SelectorElement(SelectorElement::Id("bar")),
+        Token::Char(ReservedChar::Space),
+        Token::SelectorElement(SelectorElement::Tag("p")),
+        Token::SelectorElement(SelectorElement::PseudoClass("hover")),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("color"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("blue"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Other("background"),
+        Token::Char(ReservedChar::Colon),
+        Token::String("\"blue\""),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+        Token::SelectorElement(SelectorElement::Media("media")),
+        Token::Other("screen"),
+        Token::Char(ReservedChar::Space),
+        Token::Other("and"),
+        Token::Char(ReservedChar::Space),
+        Token::Char(ReservedChar::OpenParenthese),
+        Token::Other("max-width"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("640px"),
+        Token::Char(ReservedChar::CloseParenthese),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::SelectorElement(SelectorElement::Class("block")),
+        Token::SelectorElement(SelectorElement::PseudoClass("hover")),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("display"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("block"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+    ];
     assert_eq!(tokenize(s), Ok(Tokens(expected)));
 }
 
@@ -710,84 +743,81 @@ span[lang="pt"] {
     font-size: 12em; // I love big fonts
 }
 "#;
-    let expected = vec![Token::License(" just some license "),
-                        Token::SelectorElement(SelectorElement::Tag("a")),
-                        Token::Char(ReservedChar::OpenBracket),
-                        Token::Other("href"),
-                        Token::SelectorOperator(SelectorOperator::Contains),
-                        Token::String("\"example\""),
-                        Token::Char(ReservedChar::CloseBracket),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::Other("background"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("yellow"),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace),
-
-                        Token::SelectorElement(SelectorElement::Tag("a")),
-                        Token::Char(ReservedChar::OpenBracket),
-                        Token::Other("href"),
-                        Token::SelectorOperator(SelectorOperator::EndsWith),
-                        Token::String("\".org\""),
-                        Token::Char(ReservedChar::CloseBracket),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::Other("font-style"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("italic"),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace),
-
-                        Token::SelectorElement(SelectorElement::Tag("span")),
-                        Token::Char(ReservedChar::OpenBracket),
-                        Token::Other("lang"),
-                        Token::SelectorOperator(SelectorOperator::EqualsOrStartsWithFollowedByDash),
-                        Token::String("\"zh\""),
-                        Token::Char(ReservedChar::CloseBracket),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::Other("color"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("red"),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace),
-
-                        Token::SelectorElement(SelectorElement::Tag("a")),
-                        Token::Char(ReservedChar::OpenBracket),
-                        Token::Other("href"),
-                        Token::SelectorOperator(SelectorOperator::FirstStartsWith),
-                        Token::String("\"/\""),
-                        Token::Char(ReservedChar::CloseBracket),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::Other("background-color"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("gold"),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace),
-
-                        Token::SelectorElement(SelectorElement::Tag("div")),
-                        Token::Char(ReservedChar::OpenBracket),
-                        Token::Other("value"),
-                        Token::SelectorOperator(SelectorOperator::OneAttributeEquals),
-                        Token::String("\"test\""),
-                        Token::Char(ReservedChar::CloseBracket),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::Other("border-width"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("1px"),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace),
-
-                        Token::SelectorElement(SelectorElement::Tag("span")),
-                        Token::Char(ReservedChar::OpenBracket),
-                        Token::Other("lang"),
-                        Token::Char(ReservedChar::EqualSign),
-                        Token::String("\"pt\""),
-                        Token::Char(ReservedChar::CloseBracket),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::Other("font-size"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("12em"),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace)];
+    let expected = vec![
+        Token::License(" just some license "),
+        Token::SelectorElement(SelectorElement::Tag("a")),
+        Token::Char(ReservedChar::OpenBracket),
+        Token::Other("href"),
+        Token::SelectorOperator(SelectorOperator::Contains),
+        Token::String("\"example\""),
+        Token::Char(ReservedChar::CloseBracket),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("background"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("yellow"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+        Token::SelectorElement(SelectorElement::Tag("a")),
+        Token::Char(ReservedChar::OpenBracket),
+        Token::Other("href"),
+        Token::SelectorOperator(SelectorOperator::EndsWith),
+        Token::String("\".org\""),
+        Token::Char(ReservedChar::CloseBracket),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("font-style"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("italic"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+        Token::SelectorElement(SelectorElement::Tag("span")),
+        Token::Char(ReservedChar::OpenBracket),
+        Token::Other("lang"),
+        Token::SelectorOperator(SelectorOperator::EqualsOrStartsWithFollowedByDash),
+        Token::String("\"zh\""),
+        Token::Char(ReservedChar::CloseBracket),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("color"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("red"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+        Token::SelectorElement(SelectorElement::Tag("a")),
+        Token::Char(ReservedChar::OpenBracket),
+        Token::Other("href"),
+        Token::SelectorOperator(SelectorOperator::FirstStartsWith),
+        Token::String("\"/\""),
+        Token::Char(ReservedChar::CloseBracket),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("background-color"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("gold"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+        Token::SelectorElement(SelectorElement::Tag("div")),
+        Token::Char(ReservedChar::OpenBracket),
+        Token::Other("value"),
+        Token::SelectorOperator(SelectorOperator::OneAttributeEquals),
+        Token::String("\"test\""),
+        Token::Char(ReservedChar::CloseBracket),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("border-width"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("1px"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+        Token::SelectorElement(SelectorElement::Tag("span")),
+        Token::Char(ReservedChar::OpenBracket),
+        Token::Other("lang"),
+        Token::Char(ReservedChar::EqualSign),
+        Token::String("\"pt\""),
+        Token::Char(ReservedChar::CloseBracket),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("font-size"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("12em"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+    ];
     assert_eq!(tokenize(s), Ok(Tokens(expected)));
 }
 
@@ -795,18 +825,20 @@ span[lang="pt"] {
 fn check_media() {
     let s = "@media (max-width: 700px) { color: red; }";
 
-    let expected = vec![Token::SelectorElement(SelectorElement::Media("media")),
-                        Token::Char(ReservedChar::OpenParenthese),
-                        Token::Other("max-width"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("700px"),
-                        Token::Char(ReservedChar::CloseParenthese),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::SelectorElement(SelectorElement::Tag("color")),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("red"),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace)];
+    let expected = vec![
+        Token::SelectorElement(SelectorElement::Media("media")),
+        Token::Char(ReservedChar::OpenParenthese),
+        Token::Other("max-width"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("700px"),
+        Token::Char(ReservedChar::CloseParenthese),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::SelectorElement(SelectorElement::Tag("color")),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("red"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+    ];
 
     assert_eq!(tokenize(s), Ok(Tokens(expected)));
 }
@@ -815,19 +847,21 @@ fn check_media() {
 fn check_calc() {
     let s = ".foo { width: calc(100% - 34px); }";
 
-    let expected = vec![Token::SelectorElement(SelectorElement::Class("foo")),
-                        Token::Char(ReservedChar::OpenCurlyBrace),
-                        Token::Other("width"),
-                        Token::Char(ReservedChar::Colon),
-                        Token::Other("calc"),
-                        Token::Char(ReservedChar::OpenParenthese),
-                        Token::Other("100%"),
-                        Token::Char(ReservedChar::Space),
-                        Token::Other("-"),
-                        Token::Char(ReservedChar::Space),
-                        Token::Other("34px"),
-                        Token::Char(ReservedChar::CloseParenthese),
-                        Token::Char(ReservedChar::SemiColon),
-                        Token::Char(ReservedChar::CloseCurlyBrace)];
+    let expected = vec![
+        Token::SelectorElement(SelectorElement::Class("foo")),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("width"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("calc"),
+        Token::Char(ReservedChar::OpenParenthese),
+        Token::Other("100%"),
+        Token::Char(ReservedChar::Space),
+        Token::Other("-"),
+        Token::Char(ReservedChar::Space),
+        Token::Other("34px"),
+        Token::Char(ReservedChar::CloseParenthese),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+    ];
     assert_eq!(tokenize(s), Ok(Tokens(expected)));
 }

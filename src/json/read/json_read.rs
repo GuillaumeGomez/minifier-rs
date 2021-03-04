@@ -1,5 +1,12 @@
-use json::{json_minifier::JsonMinifier, read::byte_to_char::{ByteToChar, CharsError}};
-use std::{fmt, io::{Error, ErrorKind, Read}, vec::IntoIter};
+use json::{
+    json_minifier::JsonMinifier,
+    read::byte_to_char::{ByteToChar, CharsError},
+};
+use std::{
+    fmt,
+    io::{Error, ErrorKind, Read},
+    vec::IntoIter,
+};
 
 pub struct JsonRead<P, R> {
     minifier: JsonMinifier,
@@ -30,8 +37,8 @@ impl<P, R: Read> JsonRead<P, R> {
             None => Ok(None),
             Some(item) => match item {
                 Ok(item) => Ok(Some(item)),
-                Err(err) => Err(err)
-            }
+                Err(err) => Err(err),
+            },
         }
     }
 
@@ -52,20 +59,16 @@ impl<P, R: Read> JsonRead<P, R> {
 impl<P, R: Read + fmt::Debug> fmt::Debug for JsonRead<P, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Filter")
-         .field("iter", &self.iter)
-         .field("initialized", &self.initialized)
-         .finish()
+            .field("iter", &self.iter)
+            .field("initialized", &self.initialized)
+            .finish()
     }
 }
 
 impl<P, R> Read for JsonRead<P, R>
-    where
-        R: Read,
-        P: FnMut(
-            &mut JsonMinifier,
-            &char,
-            Option<&char>,
-        ) -> bool,
+where
+    R: Read,
+    P: FnMut(&mut JsonMinifier, &char, Option<&char>) -> bool,
 {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         let mut buf_pos: usize = 0;
@@ -82,11 +85,7 @@ impl<P, R> Read for JsonRead<P, R>
 
         while let Some(item) = self.item1.take() {
             self.item1 = self.get_next()?;
-            if (self.predicate)(
-                &mut self.minifier,
-                &item,
-                self.item1.as_ref(),
-            ) {
+            if (self.predicate)(&mut self.minifier, &item, self.item1.as_ref()) {
                 self.item_iter = Some(item.to_string().into_bytes().into_iter());
                 self.add_char_to_buffer(buf, &mut buf_pos);
             }
