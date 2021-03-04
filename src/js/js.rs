@@ -1048,6 +1048,19 @@ fn minify_minified() {
     assert_eq!(minify(source), expected);
 }
 
+#[test]
+fn check_string() {
+    let source = r###"
+        const a = 123;
+        const b = "123";
+        const c = `the number is ${a}  <-- note the spaces here`;
+        const d = `      ${a}         ${b}      `;
+    "###;
+    let expected = "const a=123;const b=\"123\";const c=`the number is ${a}  <-- note the spaces \
+    here`;const d=`      ${a}         ${b}      `";
+    assert_eq!(minify(source), expected);
+}
+
 // TODO: requires AST to fix this issue!
 /*#[test]
 fn no_semi_colon() {
