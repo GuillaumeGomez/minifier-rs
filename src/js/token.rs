@@ -58,6 +58,7 @@ pub enum ReservedChar {
     SuperiorThan,
     Pipe,
     Ampersand,
+    BackTick,
 }
 
 impl ReservedChar {
@@ -100,6 +101,7 @@ impl fmt::Display for ReservedChar {
                    ReservedChar::SuperiorThan    => '>',
                    ReservedChar::Pipe            => '|',
                    ReservedChar::Ampersand       => '&',
+                   ReservedChar::BackTick        => '`',
                })
     }
 }
@@ -138,6 +140,7 @@ impl MyTryFrom<char> for ReservedChar {
             '>'  => Ok(ReservedChar::SuperiorThan),
             '|'  => Ok(ReservedChar::Pipe),
             '&'  => Ok(ReservedChar::Ampersand),
+            '`'  => Ok(ReservedChar::BackTick),
             _    => Err("Unknown reserved char"),
         }
     }
@@ -715,6 +718,48 @@ fn get_string<'a>(source: &'a str, iterator: &mut MyPeekable<'_>, start_pos: &mu
     None
 }
 
+fn get_backtick_string<'a>(source: &'a str, iterator: &mut MyPeekable<'_>, start_pos: &mut usize) -> Option<Token<'a>> {
+    while let Some((pos, c)) = iterator.next() {
+        if c == '\\' {
+            // we skip next character
+            iterator.next();
+            continue
+        }
+        if c == '$' && iterator.peek().map(|(_, c)| c == '{').unwrap_or(false) {
+            let mut count = 0;
+
+            loop {
+                if let Some((mut pos, c)) = iterator.next() {
+                    if c == '\\' {
+                        // we skip next character
+                        iterator.next();
+                        continue
+                    } else if c == '"' || c == '\'' {
+                        // We don't care about the result
+                        get_string(source, iterator, &mut pos, ReservedChar::try_from(c).expect("ReservedChar::try_from unexpectedly failed..."));
+                    } else if c == '`' {
+                        get_backtick_string(source, iterator, &mut pos);
+                    } else if c == '{' {
+                        count += 1;
+                    } else if c == '}' {
+                        count -= 1;
+                        if count == 0 {
+                            break;
+                        }
+                    }
+                } else {
+                    return None;
+                }
+            }
+        } else if c == '`' {
+            let ret = Some(Token::String(&source[*start_pos..pos + 1]));
+            *start_pos = pos;
+            return ret;
+        }
+    }
+    None
+}
+
 fn first_useful<'a>(v: &'a [Token<'a>]) -> Option<&'a Token<'a>> {
     for x in v.iter().rev() {
         if x.is_white_character() {
@@ -914,6 +959,10 @@ pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
             if_match! {
                 c == ReservedChar::Quote || c == ReservedChar::DoubleQuote =>
                     if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
+                        v.push(s);
+                    },
+                c == ReservedChar::BackTick =>
+                    if let Some(s) = get_backtick_string(source, &mut iterator, &mut pos) {
                         v.push(s);
                     },
                 c == ReservedChar::Slash &&
