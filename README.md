@@ -1,5 +1,3 @@
-[![Build Status](https://api.travis-ci.org/GuillaumeGomez/minifier-rs.png?branch=master)](https://travis-ci.org/GuillaumeGomez/minifier-rs) [![Build status](https://ci.appveyor.com/api/projects/status/5bj86vqsah7927tc?svg=true)](https://ci.appveyor.com/project/GuillaumeGomez/minifier-rs)
-
 # minifier-rs
 
 Minifier tool/lib for JS/CSS/JSON files.
