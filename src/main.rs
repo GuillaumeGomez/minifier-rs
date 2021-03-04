@@ -57,7 +57,7 @@ where
             let mut out = PathBuf::from(file_path);
             let original_extension = out
                 .extension()
-                .unwrap_or(OsStr::new(""))
+                .unwrap_or_else(|| OsStr::new(""))
                 .to_str()
                 .unwrap_or("")
                 .to_owned();
@@ -109,7 +109,7 @@ fn main() {
         }
         match p
             .extension()
-            .unwrap_or(OsStr::new(""))
+            .unwrap_or_else(|| OsStr::new(""))
             .to_str()
             .unwrap_or("")
         {

@@ -113,12 +113,6 @@ pub enum CharsError {
 }
 
 impl error::Error for CharsError {
-    fn description(&self) -> &str {
-        match *self {
-            CharsError::NotUtf8 => "invalid utf8 encoding",
-            CharsError::Other(ref e) => Error::description(e),
-        }
-    }
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             CharsError::NotUtf8 => None,

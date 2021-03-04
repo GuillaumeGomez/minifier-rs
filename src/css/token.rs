@@ -201,29 +201,29 @@ impl<'a> MyTryFrom<&'a str> for SelectorElement<'a> {
     type Error = &'static str;
 
     fn try_from(value: &'a str) -> Result<SelectorElement, Self::Error> {
-        if value.starts_with('.') {
-            if value.len() > 1 {
-                Ok(SelectorElement::Class(&value[1..]))
-            } else {
+        if let Some(value) = value.strip_prefix('.') {
+            if value.is_empty() {
                 Err("cannot determine selector")
+            } else {
+                Ok(SelectorElement::Class(value))
             }
-        } else if value.starts_with('#') {
-            if value.len() > 1 {
-                Ok(SelectorElement::Id(&value[1..]))
-            } else {
+        } else if let Some(value) = value.strip_prefix('#') {
+            if value.is_empty() {
                 Err("cannot determine selector")
+            } else {
+                Ok(SelectorElement::Id(value))
             }
-        } else if value.starts_with('@') {
-            if value.len() > 1 {
-                Ok(SelectorElement::Media(&value[1..]))
-            } else {
+        } else if let Some(value) = value.strip_prefix('@') {
+            if value.is_empty() {
                 Err("cannot determine selector")
+            } else {
+                Ok(SelectorElement::Media(value))
             }
-        } else if value.starts_with(':') {
-            if value.len() > 1 {
-                Ok(SelectorElement::PseudoClass(&value[1..]))
-            } else {
+        } else if let Some(value) = value.strip_prefix(':') {
+            if value.is_empty() {
                 Err("cannot determine selector")
+            } else {
+                Ok(SelectorElement::PseudoClass(value))
             }
         } else if value.chars().next().unwrap_or(' ').is_alphabetic() {
             Ok(SelectorElement::Tag(value))
@@ -262,11 +262,11 @@ pub enum SelectorOperator {
 impl fmt::Display for SelectorOperator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SelectorOperator::OneAttributeEquals => write!(f, "{}", "~="),
-            SelectorOperator::EqualsOrStartsWithFollowedByDash => write!(f, "{}", "|="),
-            SelectorOperator::EndsWith => write!(f, "{}", "$="),
-            SelectorOperator::FirstStartsWith => write!(f, "{}", "^="),
-            SelectorOperator::Contains => write!(f, "{}", "*="),
+            SelectorOperator::OneAttributeEquals => write!(f, "~="),
+            SelectorOperator::EqualsOrStartsWithFollowedByDash => write!(f, "|="),
+            SelectorOperator::EndsWith => write!(f, "$="),
+            SelectorOperator::FirstStartsWith => write!(f, "^="),
+            SelectorOperator::Contains => write!(f, "*="),
         }
     }
 }
@@ -304,17 +304,11 @@ impl<'a> fmt::Display for Token<'a> {
 
 impl<'a> Token<'a> {
     fn is_comment(&self) -> bool {
-        match *self {
-            Token::Comment(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Comment(_))
     }
 
     fn is_char(&self) -> bool {
-        match *self {
-            Token::Char(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Char(_))
     }
 
     fn get_char(&self) -> Option<ReservedChar> {
@@ -339,17 +333,11 @@ impl<'a> Token<'a> {
     }
 
     fn is_a_media(&self) -> bool {
-        match *self {
-            Token::SelectorElement(SelectorElement::Media(_)) => true,
-            _ => false,
-        }
+        matches!(*self, Token::SelectorElement(SelectorElement::Media(_)))
     }
 
     fn is_a_license(&self) -> bool {
-        match *self {
-            Token::License(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::License(_))
     }
 
     fn is_operator(&self) -> bool {
@@ -376,7 +364,7 @@ fn get_line_comment<'a>(
     start_pos: &mut usize,
 ) -> Option<Token<'a>> {
     *start_pos += 1;
-    while let Some((pos, c)) = iterator.next() {
+    for (pos, c) in iterator {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Backline {
                 let ret = Some(Token::Comment(&source[*start_pos..pos]));
@@ -409,7 +397,7 @@ fn get_comment<'a>(
         Token::Comment
     };
 
-    while let Some((pos, c)) = iterator.next() {
+    for (pos, c) in iterator {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Slash && prev == ReservedChar::Star {
                 let ret = Some(builder(&source[*start_pos..pos - 1]));
@@ -457,9 +445,8 @@ fn fill_other<'a>(
     is_in_attribute_selector: bool,
 ) {
     if start < pos {
-        if is_in_attribute_selector == false
-            && ((is_in_block == 0 && is_in_media == false)
-                || (is_in_media == true && is_in_block == 1))
+        if !is_in_attribute_selector
+            && ((is_in_block == 0 && !is_in_media) || (is_in_media && is_in_block == 1))
         {
             let mut is_pseudo_class = false;
             let mut add = 0;
@@ -488,6 +475,7 @@ fn fill_other<'a>(
     }
 }
 
+#[allow(clippy::comparison_chain)]
 pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
     let mut v = Vec::with_capacity(1000);
     let mut iterator = source.char_indices().peekable();
@@ -614,7 +602,7 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
     Ok(Tokens(clean_tokens(v)))
 }
 
-fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
+fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
     let mut i = 0;
     let mut is_in_calc = false;
     let mut paren = 0;
@@ -622,7 +610,7 @@ fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
     while i < v.len() {
         if v[i] == Token::Other("calc") {
             is_in_calc = true;
-        } else if is_in_calc == true {
+        } else if is_in_calc {
             if v[i] == Token::Char(ReservedChar::CloseParenthese) {
                 paren -= 1;
                 is_in_calc = paren != 0;
@@ -642,17 +630,15 @@ fn clean_tokens<'a>(mut v: Vec<Token<'a>>) -> Vec<Token<'a>> {
                 }
             } else if i > 0 && v[i - 1] == Token::Other("and") {
                 // retain the space after an and
-            } else if is_in_calc == false
-                && ((i > 0
-                    && ((v[i - 1].is_char()
-                        && v[i - 1] != Token::Char(ReservedChar::CloseParenthese))
-                        || v[i - 1].is_a_media()
-                        || v[i - 1].is_a_license()))
-                    || (i < v.len() - 1 && v[i + 1].is_char()))
+            } else if (is_in_calc && v[i - 1].is_useless())
+                || !is_in_calc
+                    && ((i > 0
+                        && ((v[i - 1].is_char()
+                            && v[i - 1] != Token::Char(ReservedChar::CloseParenthese))
+                            || v[i - 1].is_a_media()
+                            || v[i - 1].is_a_license()))
+                        || (i < v.len() - 1 && v[i + 1].is_char()))
             {
-                v.remove(i);
-                continue;
-            } else if is_in_calc == true && v[i - 1].is_useless() {
                 v.remove(i);
                 continue;
             }

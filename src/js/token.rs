@@ -185,10 +185,7 @@ pub enum Keyword {
 
 impl Keyword {
     fn requires_before(&self) -> bool {
-        match *self {
-            Keyword::In | Keyword::InstanceOf => true,
-            _ => false,
-        }
+        matches!(*self, Keyword::In | Keyword::InstanceOf)
     }
 }
 
@@ -339,15 +336,15 @@ pub enum Operation {
 
 impl Operation {
     pub fn is_assign(&self) -> bool {
-        match *self {
+        matches!(
+            *self,
             Operation::AdditionEqual
-            | Operation::SubtractEqual
-            | Operation::MultiplyEqual
-            | Operation::DivideEqual
-            | Operation::ModuloEqual
-            | Operation::Equal => true,
-            _ => false,
-        }
+                | Operation::SubtractEqual
+                | Operation::MultiplyEqual
+                | Operation::DivideEqual
+                | Operation::ModuloEqual
+                | Operation::Equal
+        )
     }
 }
 
@@ -443,24 +440,15 @@ impl<'a> fmt::Display for Token<'a> {
 
 impl<'a> Token<'a> {
     pub fn is_comment(&self) -> bool {
-        match *self {
-            Token::Comment(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Comment(_))
     }
 
     pub fn is_license(&self) -> bool {
-        match *self {
-            Token::License(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::License(_))
     }
 
     pub fn is_reserved_char(&self) -> bool {
-        match *self {
-            Token::Char(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Char(_))
     }
 
     pub fn get_char(&self) -> Option<ReservedChar> {
@@ -485,10 +473,7 @@ impl<'a> Token<'a> {
     }
 
     pub fn is_operation(&self) -> bool {
-        match *self {
-            Token::Operation(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Operation(_))
     }
 
     pub fn eq_condition(&self, cond: Condition) -> bool {
@@ -499,17 +484,11 @@ impl<'a> Token<'a> {
     }
 
     pub fn is_condition(&self) -> bool {
-        match *self {
-            Token::Condition(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Condition(_))
     }
 
     pub fn is_other(&self) -> bool {
-        match *self {
-            Token::Other(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Other(_))
     }
 
     pub fn get_other(&self) -> Option<&str> {
@@ -527,10 +506,7 @@ impl<'a> Token<'a> {
     }
 
     pub fn is_keyword(&self) -> bool {
-        match *self {
-            Token::Keyword(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Keyword(_))
     }
 
     pub fn get_keyword(&self) -> Option<Keyword> {
@@ -541,10 +517,7 @@ impl<'a> Token<'a> {
     }
 
     pub fn is_string(&self) -> bool {
-        match *self {
-            Token::String(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::String(_))
     }
 
     pub fn get_string(&self) -> Option<&str> {
@@ -555,38 +528,23 @@ impl<'a> Token<'a> {
     }
 
     pub fn is_regex(&self) -> bool {
-        match *self {
-            Token::Regex { .. } => true,
-            _ => false,
-        }
+        matches!(*self, Token::Regex { .. })
     }
 
     pub fn is_created_var_decl(&self) -> bool {
-        match *self {
-            Token::CreatedVarDecl(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::CreatedVarDecl(_))
     }
 
     pub fn is_created_var(&self) -> bool {
-        match *self {
-            Token::CreatedVar(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::CreatedVar(_))
     }
 
     pub fn is_number(&self) -> bool {
-        match *self {
-            Token::Number(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::Number(_))
     }
 
     pub fn is_floating_number(&self) -> bool {
-        match *self {
-            Token::FloatingNumber(_) => true,
-            _ => false,
-        }
+        matches!(*self, Token::FloatingNumber(_))
     }
 
     fn get_required(&self) -> Option<char> {
@@ -614,7 +572,7 @@ fn get_line_comment<'a>(
     start_pos: &mut usize,
 ) -> Option<Token<'a>> {
     *start_pos += 1;
-    while let Some((pos, c)) = iterator.next() {
+    for (pos, c) in iterator {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Backline {
                 let ret = Some(Token::Comment(&source[*start_pos..pos]));
@@ -671,8 +629,8 @@ fn get_regex<'a>(
                 }
                 let ret = Some(Token::Regex {
                     regex: &source[*start_pos + 1..pos],
-                    is_interactive: is_interactive,
-                    is_global: is_global,
+                    is_interactive,
+                    is_global,
                 });
                 *start_pos = pos + add;
                 iterator.drop_save();
@@ -707,7 +665,7 @@ fn get_comment<'a>(
         Token::Comment
     };
 
-    while let Some((pos, c)) = iterator.next() {
+    for (pos, c) in iterator {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Slash && prev == ReservedChar::Star {
                 let ret = Some(builder(&source[*start_pos..pos - 1]));
@@ -965,7 +923,7 @@ impl<'a> Iterator for MyPeekable<'a> {
     }
 }
 
-pub fn tokenize<'a>(source: &'a str) -> Tokens<'a> {
+pub fn tokenize(source: &str) -> Tokens<'_> {
     let mut v = Vec::with_capacity(1000);
     let mut start = 0;
     let mut iterator = MyPeekable::new(source.char_indices());

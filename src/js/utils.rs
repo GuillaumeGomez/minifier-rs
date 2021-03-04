@@ -50,26 +50,17 @@ impl<'a> VariableNameGenerator<'a> {
         self.incr_letters();
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub(crate) fn to_string(&self) -> String {
         if let Some(ref lower) = self.lower {
             format!(
                 "{}{}{}",
-                match self.prepend {
-                    Some(ref p) => p,
-                    None => "",
-                },
+                self.prepend.unwrap_or(""),
                 self.letter,
                 lower.to_string()
             )
         } else {
-            format!(
-                "{}{}",
-                match self.prepend {
-                    Some(ref p) => p,
-                    None => "",
-                },
-                self.letter
-            )
+            format!("{}{}", self.prepend.unwrap_or(""), self.letter)
         }
     }
 
@@ -254,13 +245,13 @@ pub fn get_variable_name_and_value_positions<'a>(
                         tmp2 += 1;
                     }
                     break;
-                } else if match tokens[tmp2].get_char() {
-                    Some(ReservedChar::Comma) | Some(ReservedChar::SemiColon) => true,
-                    _ => false,
-                } {
+                } else if matches!(
+                    tokens[tmp2].get_char(),
+                    Some(ReservedChar::Comma) | Some(ReservedChar::SemiColon)
+                ) {
                     return Some((tmp, None));
-                } else if !tokens[tmp2].is_comment()
-                    && !(tokens[tmp2].is_white_character()
+                } else if !(tokens[tmp2].is_comment()
+                    || tokens[tmp2].is_white_character()
                         && tokens[tmp2].get_char() != Some(ReservedChar::Backline))
                 {
                     break;
@@ -277,7 +268,7 @@ pub fn get_variable_name_and_value_positions<'a>(
 
 #[inline]
 fn get_next<'a>(it: &mut IntoIter<Token<'a>>) -> Option<Token<'a>> {
-    while let Some(t) = it.next() {
+    for t in it {
         if t.is_comment() || t.is_white_character() {
             continue;
         }
@@ -305,7 +296,7 @@ fn get_next<'a>(it: &mut IntoIter<Token<'a>>) -> Option<Token<'a>> {
 /// }
 /// ```
 #[inline]
-pub fn clean_tokens<'a>(tokens: Tokens<'a>) -> Tokens<'a> {
+pub fn clean_tokens(tokens: Tokens<'_>) -> Tokens<'_> {
     let mut v = Vec::with_capacity(tokens.len() / 3 * 2);
     let mut it = tokens.0.into_iter();
 
@@ -354,7 +345,7 @@ fn get_next_except<'a, F: Fn(&Token<'a>) -> bool>(
     it: &mut IntoIter<Token<'a>>,
     f: &F,
 ) -> Option<Token<'a>> {
-    while let Some(t) = it.next() {
+    for t in it {
         if (t.is_comment() || t.is_white_character()) && f(&t) {
             continue;
         }

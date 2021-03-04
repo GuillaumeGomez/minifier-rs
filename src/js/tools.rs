@@ -363,7 +363,7 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
 /// }
 /// ```
 #[inline]
-pub fn aggregate_strings<'a>(tokens: Tokens<'a>) -> Tokens<'a> {
+pub fn aggregate_strings(tokens: Tokens<'_>) -> Tokens<'_> {
     aggregate_strings_inner(tokens, None)
 }
 
@@ -513,10 +513,8 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
                 continue;
             }
             to_insert.push((end_bracket, Token::CreatedVar(format!("\"{}\"", *s))));
-            if !iter.peek().is_some() {
-                if current_array_values.is_empty() {
-                    continue;
-                }
+            if iter.peek().is_none() && current_array_values.is_empty() {
+                continue;
             }
             to_insert.push((end_bracket, Token::Char(ReservedChar::Comma)));
         }
@@ -645,7 +643,7 @@ where
 /// }
 /// ```
 #[inline]
-pub fn simple_minify<'a>(source: &'a str) -> Tokens<'a> {
+pub fn simple_minify(source: &str) -> Tokens<'_> {
     token::tokenize(source)
 }
 
