@@ -20,13 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use std::convert::TryFrom;
 use std::fmt;
 use std::str::{CharIndices, FromStr};
-
-pub trait MyTryFrom<T>: Sized {
-    type Error;
-    fn try_from(value: T) -> Result<Self, Self::Error>;
-}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum ReservedChar {
@@ -109,7 +105,7 @@ impl fmt::Display for ReservedChar {
     }
 }
 
-impl MyTryFrom<char> for ReservedChar {
+impl TryFrom<char> for ReservedChar {
     type Error = &'static str;
 
     fn try_from(value: char) -> Result<ReservedChar, Self::Error> {
@@ -231,7 +227,7 @@ impl fmt::Display for Keyword {
     }
 }
 
-impl<'a> MyTryFrom<&'a str> for Keyword {
+impl<'a> TryFrom<&'a str> for Keyword {
     type Error = &'static str;
 
     fn try_from(value: &str) -> Result<Keyword, Self::Error> {
@@ -307,7 +303,7 @@ impl fmt::Display for Condition {
     }
 }
 
-impl MyTryFrom<ReservedChar> for Condition {
+impl TryFrom<ReservedChar> for Condition {
     type Error = &'static str;
 
     fn try_from(value: ReservedChar) -> Result<Condition, Self::Error> {
@@ -370,7 +366,7 @@ impl fmt::Display for Operation {
     }
 }
 
-impl MyTryFrom<ReservedChar> for Operation {
+impl TryFrom<ReservedChar> for Operation {
     type Error = &'static str;
 
     fn try_from(value: ReservedChar) -> Result<Operation, Self::Error> {
