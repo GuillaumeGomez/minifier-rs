@@ -147,7 +147,7 @@ fn unquote_attributes(source: &str) -> String {
                             } else {
                                 format!("{}", c)
                             },
-                            caps.as_str()[1..].trim_left()
+                            caps.as_str()[1..].trim_start()
                         ),
                     );
                 }

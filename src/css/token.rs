@@ -20,14 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use std::convert::TryFrom;
 use std::fmt;
 use std::iter::Peekable;
 use std::str::CharIndices;
-
-pub trait MyTryFrom<T>: Sized {
-    type Error;
-    fn try_from(value: T) -> Result<Self, Self::Error>;
-}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ReservedChar {
@@ -90,7 +86,7 @@ impl fmt::Display for ReservedChar {
     }
 }
 
-impl MyTryFrom<char> for ReservedChar {
+impl TryFrom<char> for ReservedChar {
     type Error = &'static str;
 
     fn try_from(value: char) -> Result<ReservedChar, Self::Error> {
@@ -160,7 +156,7 @@ impl fmt::Display for Operator {
     }
 }
 
-impl MyTryFrom<char> for Operator {
+impl TryFrom<char> for Operator {
     type Error = &'static str;
 
     fn try_from(value: char) -> Result<Operator, Self::Error> {
@@ -175,7 +171,7 @@ impl MyTryFrom<char> for Operator {
     }
 }
 
-impl MyTryFrom<ReservedChar> for Operator {
+impl TryFrom<ReservedChar> for Operator {
     type Error = &'static str;
 
     fn try_from(value: ReservedChar) -> Result<Operator, Self::Error> {
@@ -197,7 +193,7 @@ pub enum SelectorElement<'a> {
     Media(&'a str),
 }
 
-impl<'a> MyTryFrom<&'a str> for SelectorElement<'a> {
+impl<'a> TryFrom<&'a str> for SelectorElement<'a> {
     type Error = &'static str;
 
     fn try_from(value: &'a str) -> Result<SelectorElement, Self::Error> {
