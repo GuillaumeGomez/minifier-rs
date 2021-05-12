@@ -265,3 +265,18 @@ fn check_whitespaces_in_calc() {
     let expected = ".foo{width:calc(130px + (45% - 10% + (12 * 2px)));}";
     assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
 }
+
+#[test]
+fn check_weird_comments() {
+    let s = ".test1 {
+    font-weight: 30em;
+}/**/
+.test2 {
+    font-weight: 30em;
+}/**/
+.test3 {
+    font-weight: 30em;
+}/**/";
+    let expected = ".test1{font-weight:30em;}.test2{font-weight:30em;}.test3{font-weight:30em;}";
+    assert_eq!(minify(s).expect("minify failed").as_str(), expected);
+}

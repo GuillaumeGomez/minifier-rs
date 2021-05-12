@@ -380,7 +380,7 @@ fn get_comment<'a>(
     let mut prev = ReservedChar::Quote;
     *start_pos += 1;
     let builder = if let Some((_, c)) = iterator.next() {
-        if c == '!' || c == '*' {
+        if c == '!' || (c == '*' && iterator.peek().map(|(_, c)| c) != Some(&'/')) {
             *start_pos += 1;
             Token::License
         } else {
