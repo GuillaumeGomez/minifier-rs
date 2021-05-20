@@ -354,24 +354,6 @@ impl<'a> PartialEq<ReservedChar> for Token<'a> {
     }
 }
 
-fn get_line_comment<'a>(
-    source: &'a str,
-    iterator: &mut Peekable<CharIndices>,
-    start_pos: &mut usize,
-) -> Option<Token<'a>> {
-    *start_pos += 1;
-    for (pos, c) in iterator {
-        if let Ok(c) = ReservedChar::try_from(c) {
-            if c == ReservedChar::Backline {
-                let ret = Some(Token::Comment(&source[*start_pos..pos]));
-                *start_pos = pos;
-                return ret;
-            }
-        }
-    }
-    None
-}
-
 fn get_comment<'a>(
     source: &'a str,
     iterator: &mut Peekable<CharIndices>,
@@ -523,13 +505,6 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
                         v.push(s);
                     }
                 },
-                c == ReservedChar::Slash &&
-                *v.last().unwrap_or(&Token::Char(ReservedChar::Space)) == ReservedChar::Slash => {
-                    v.pop();
-                    if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
-                        v.push(s);
-                    }
-                },
                 c == ReservedChar::OpenBracket => {
                     if is_in_attribute_selector {
                         return Err("Already in attribute selector");
@@ -668,7 +643,7 @@ fn css_basic() {
     background: "blue";
 }
 
-// a comment!
+/* a comment! */
 @media screen and (max-width: 640px) {
     .block:hover {
         display:    block;
@@ -736,7 +711,7 @@ div[value~="test"] {
     border-width: 1px;
 }
 span[lang="pt"] {
-    font-size: 12em; // I love big fonts
+    font-size: 12em; /* I love big fonts */
 }
 "#;
     let expected = vec![
