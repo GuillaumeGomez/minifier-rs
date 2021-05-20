@@ -166,7 +166,7 @@ fn check_minification() {
 }
 
 a[target = "_blank"] {
-    // I like weird tests.
+    /* I like weird tests. */
     border: 1px solid yellow   ;
 }
 "#;
@@ -278,5 +278,14 @@ fn check_weird_comments() {
     font-weight: 30em;
 }/**/";
     let expected = ".test1{font-weight:30em;}.test2{font-weight:30em;}.test3{font-weight:30em;}";
+    assert_eq!(minify(s).expect("minify failed").as_str(), expected);
+}
+
+#[test]
+fn check_slash_slash() {
+    let s = "body {
+    background-image: url(data:image/webp;base64,c//S4KP//ZZ/19Uj/UA==);
+}";
+    let expected = "body{background-image:url(data:image/webp;base64,c//S4KP//ZZ/19Uj/UA==);}";
     assert_eq!(minify(s).expect("minify failed").as_str(), expected);
 }
