@@ -321,13 +321,6 @@ impl<'a> Token<'a> {
         }
     }
 
-    fn is_media(&self, media: &str) -> bool {
-        match *self {
-            Token::SelectorElement(SelectorElement::Media(s)) => s == media,
-            _ => false,
-        }
-    }
-
     fn is_a_media(&self) -> bool {
         matches!(*self, Token::SelectorElement(SelectorElement::Media(_)))
     }
