@@ -491,7 +491,7 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
             is_in_media = is_in_media
                 || v.last()
                     .unwrap_or(&Token::Char(ReservedChar::Space))
-                    .is_media("media");
+                    .is_a_media();
             if_match! {
                 c == ReservedChar::Quote || c == ReservedChar::DoubleQuote => {
                     if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
@@ -599,10 +599,11 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
                     v.remove(i);
                     continue;
                 }
-            } else if i > 0 
-                && (v[i - 1] == Token::Other("and") 
-                    || v[i - 1] == Token::Other("or") 
-                    || v[i - 1] == Token::Other("not")) {
+            } else if i > 0
+                && (v[i - 1] == Token::Other("and")
+                    || v[i - 1] == Token::Other("or")
+                    || v[i - 1] == Token::Other("not"))
+            {
                 // retain the space after "and", "or" or "not"
             } else if (is_in_calc && v[i - 1].is_useless())
                 || !is_in_calc
@@ -811,6 +812,33 @@ fn check_media() {
         Token::Char(ReservedChar::Colon),
         Token::Other("red"),
         Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
+    ];
+
+    assert_eq!(tokenize(s), Ok(Tokens(expected)));
+}
+
+#[test]
+fn check_supports() {
+    let s = "@supports not (display: grid) { div { float: right; } }";
+
+    let expected = vec![
+        Token::SelectorElement(SelectorElement::Media("supports")),
+        Token::Other("not"),
+        Token::Char(ReservedChar::Space),
+        Token::Char(ReservedChar::OpenParenthese),
+        Token::Other("display"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("grid"),
+        Token::Char(ReservedChar::CloseParenthese),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::SelectorElement(SelectorElement::Tag("div")),
+        Token::Char(ReservedChar::OpenCurlyBrace),
+        Token::Other("float"),
+        Token::Char(ReservedChar::Colon),
+        Token::Other("right"),
+        Token::Char(ReservedChar::SemiColon),
+        Token::Char(ReservedChar::CloseCurlyBrace),
         Token::Char(ReservedChar::CloseCurlyBrace),
     ];
 
