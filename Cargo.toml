@@ -1,6 +1,6 @@
 [package]
 name = "minifier"
-version = "0.0.41"
+version = "0.0.42"
 authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>"]
 
 description = "Minifier tool/lib for JS/CSS/JSON files"
