@@ -241,6 +241,13 @@ fn check_space_after_and() {
 }
 
 #[test]
+fn check_space_after_or_not() {
+    let s = "@supports not ((text-align-last: justify) or (-moz-text-align-last: justify)) {}";
+    let expected = "@supports not ((text-align-last:justify) or (-moz-text-align-last:justify)){}";
+    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+}
+
+#[test]
 fn check_space_after_brackets() {
     let s = "#main[data-behavior = \"1\"] {}";
     let expected = "#main[data-behavior=\"1\"]{}";
