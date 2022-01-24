@@ -599,8 +599,11 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
                     v.remove(i);
                     continue;
                 }
-            } else if i > 0 && v[i - 1] == Token::Other("and") {
-                // retain the space after an and
+            } else if i > 0 
+                && (v[i - 1] == Token::Other("and") 
+                    || v[i - 1] == Token::Other("or") 
+                    || v[i - 1] == Token::Other("not")) {
+                // retain the space after "and", "or" or "not"
             } else if (is_in_calc && v[i - 1].is_useless())
                 || !is_in_calc
                     && ((i > 0
