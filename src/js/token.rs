@@ -1039,6 +1039,7 @@ impl<'a> fmt::Display for Tokens<'a> {
 }
 
 impl<'a> Tokens<'a> {
+    #[must_use]
     pub fn apply<F>(self, func: F) -> Tokens<'a>
     where
         F: Fn(Tokens<'a>) -> Tokens<'a>,

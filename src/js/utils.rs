@@ -67,7 +67,7 @@ impl<'a> VariableNameGenerator<'a> {
     #[allow(dead_code)]
     pub(crate) fn len(&self) -> usize {
         let first = match self.prepend {
-            Some(ref s) => s.len(),
+            Some(s) => s.len(),
             None => 0,
         } + 1;
         first

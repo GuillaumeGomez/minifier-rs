@@ -429,7 +429,6 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
         let mut validated: HashSet<&str> = HashSet::new();
 
         let mut array_pos = 0;
-        let mut array_pos_str;
         for s in current_array_values.iter() {
             if let Some(st) = tokens.0[*s].get_string() {
                 strs.insert(&st[1..st.len() - 1], (array_pos, vec![], false));
@@ -439,7 +438,7 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
             }
         }
 
-        array_pos_str = array_pos.to_string();
+        let mut array_pos_str = array_pos.to_string();
         for pos in 0..tokens.len() {
             if to_ignore.contains(&pos) {
                 continue;
