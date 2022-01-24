@@ -1,3 +1,5 @@
+// Take a look at the license at the top of the repository in the LICENSE file.
+
 #[derive(Debug)]
 pub struct JsonMinifier {
     pub is_string: bool,

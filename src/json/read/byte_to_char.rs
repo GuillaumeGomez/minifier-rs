@@ -1,3 +1,5 @@
+// Take a look at the license at the top of the repository in the LICENSE file.
+
 use json::read::internal_reader::InternalReader;
 use std::{
     error, fmt,

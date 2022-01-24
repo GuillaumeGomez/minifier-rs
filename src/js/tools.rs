@@ -1,24 +1,4 @@
-// MIT License
-//
-// Copyright (c) 2018 Guillaume Gomez
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// Take a look at the license at the top of the repository in the LICENSE file.
 
 use js::token::{self, Keyword, ReservedChar, Token, Tokens};
 use js::utils::{get_array, get_variable_name_and_value_positions, VariableNameGenerator};
@@ -429,7 +409,6 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
         let mut validated: HashSet<&str> = HashSet::new();
 
         let mut array_pos = 0;
-        let mut array_pos_str;
         for s in current_array_values.iter() {
             if let Some(st) = tokens.0[*s].get_string() {
                 strs.insert(&st[1..st.len() - 1], (array_pos, vec![], false));
@@ -439,7 +418,7 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
             }
         }
 
-        array_pos_str = array_pos.to_string();
+        let mut array_pos_str = array_pos.to_string();
         for pos in 0..tokens.len() {
             if to_ignore.contains(&pos) {
                 continue;
