@@ -759,52 +759,52 @@ fn handle_equal_sign(v: &mut Vec<Token>, c: ReservedChar) -> bool {
     if c != ReservedChar::EqualSign {
         return false;
     }
-    if_match! {
-        v.last().unwrap_or(&Token::Other("")).eq_operation(Operation::Equal) => {
+    match v.last().unwrap_or(&Token::Other("")) {
+        Token::Operation(Operation::Equal) => {
             v.pop();
             v.push(Token::Condition(Condition::EqualTo));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_condition(Condition::EqualTo) => {
+        }
+        Token::Condition(Condition::EqualTo) => {
             v.pop();
             v.push(Token::Condition(Condition::SuperEqualTo));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_char(ReservedChar::ExclamationMark) => {
+        }
+        Token::Char(ReservedChar::ExclamationMark) => {
             v.pop();
             v.push(Token::Condition(Condition::DifferentThan));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_condition(Condition::DifferentThan) => {
+        }
+        Token::Condition(Condition::DifferentThan) => {
             v.pop();
             v.push(Token::Condition(Condition::SuperDifferentThan));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_operation(Operation::Divide) => {
+        }
+        Token::Operation(Operation::Divide) => {
             v.pop();
             v.push(Token::Operation(Operation::DivideEqual));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_operation(Operation::Multiply) => {
+        }
+        Token::Operation(Operation::Multiply) => {
             v.pop();
             v.push(Token::Operation(Operation::MultiplyEqual));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_operation(Operation::Addition) => {
+        }
+        Token::Operation(Operation::Addition) => {
             v.pop();
             v.push(Token::Operation(Operation::AdditionEqual));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_operation(Operation::Subtract) => {
+        }
+        Token::Operation(Operation::Subtract) => {
             v.pop();
             v.push(Token::Operation(Operation::SubtractEqual));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_operation(Operation::Modulo) => {
+        }
+        Token::Operation(Operation::Modulo) => {
             v.pop();
             v.push(Token::Operation(Operation::ModuloEqual));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_condition(Condition::SuperiorThan) => {
+        }
+        Token::Condition(Condition::SuperiorThan) => {
             v.pop();
             v.push(Token::Condition(Condition::SuperiorOrEqualTo));
-        },
-        v.last().unwrap_or(&Token::Other("")).eq_condition(Condition::InferiorThan) => {
+        }
+        Token::Condition(Condition::InferiorThan) => {
             v.pop();
             v.push(Token::Condition(Condition::InferiorOrEqualTo));
-        },
-        else => {
+        }
+        _ => {
             return false;
         }
     }
@@ -927,59 +927,74 @@ pub fn tokenize(source: &str) -> Tokens<'_> {
                 }
             }
             fill_other(source, &mut v, start, pos);
-            if_match! {
-                c == ReservedChar::Quote || c == ReservedChar::DoubleQuote =>
+            match c {
+                ReservedChar::Quote | ReservedChar::DoubleQuote => {
                     if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
                         v.push(s);
-                    },
-                c == ReservedChar::BackTick =>
+                    }
+                }
+                ReservedChar::BackTick => {
                     if let Some(s) = get_backtick_string(source, &mut iterator, &mut pos) {
                         v.push(s);
-                    },
-                c == ReservedChar::Slash &&
-                v.last().unwrap_or(&Token::Other("")).eq_operation(Operation::Divide) => {
+                    }
+                }
+                ReservedChar::Slash
+                    if v.last()
+                        .unwrap_or(&Token::Other(""))
+                        .eq_operation(Operation::Divide) =>
+                {
                     v.pop();
                     if let Some(s) = get_line_comment(source, &mut iterator, &mut pos) {
                         v.push(s);
                     }
-                },
-                c == ReservedChar::Slash &&
-                iterator.peek().is_some() &&
-                iterator.peek().unwrap().1 != '/' &&
-                iterator.peek().unwrap().1 != '*' &&
-                !first_useful(&v).unwrap_or(&Token::String("")).is_other() => {
+                }
+                ReservedChar::Slash
+                    if iterator.peek().is_some()
+                        && iterator.peek().unwrap().1 != '/'
+                        && iterator.peek().unwrap().1 != '*'
+                        && !first_useful(&v).unwrap_or(&Token::String("")).is_other() =>
+                {
                     if let Some(r) = get_regex(source, &mut iterator, &mut pos, &v) {
                         v.push(r);
                     } else {
                         v.push(Token::Operation(Operation::Divide));
                     }
-                },
-                c == ReservedChar::Star &&
-                v.last().unwrap_or(&Token::Other("")).eq_operation(Operation::Divide) => {
+                }
+                ReservedChar::Star
+                    if v.last()
+                        .unwrap_or(&Token::Other(""))
+                        .eq_operation(Operation::Divide) =>
+                {
                     v.pop();
                     if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
                         v.push(s);
                     }
-                },
-                c == ReservedChar::Pipe &&
-                v.last().unwrap_or(&Token::Other("")).eq_char(ReservedChar::Pipe) => {
+                }
+                ReservedChar::Pipe
+                    if v.last()
+                        .unwrap_or(&Token::Other(""))
+                        .eq_char(ReservedChar::Pipe) =>
+                {
                     v.pop();
                     v.push(Token::Condition(Condition::Or));
-                },
-                c == ReservedChar::Ampersand &&
-                v.last().unwrap_or(&Token::Other("")).eq_char(ReservedChar::Ampersand) => {
+                }
+                ReservedChar::Ampersand
+                    if v.last()
+                        .unwrap_or(&Token::Other(""))
+                        .eq_char(ReservedChar::Ampersand) =>
+                {
                     v.pop();
                     v.push(Token::Condition(Condition::And));
-                },
-                handle_equal_sign(&mut v, c) => {},
-                let Ok(o) = Operation::try_from(c) => {
-                    v.push(Token::Operation(o));
-                },
-                let Ok(o) = Condition::try_from(c) => {
-                    v.push(Token::Condition(o));
-                },
-                else => {
-                    v.push(Token::Char(c));
+                }
+                _ if handle_equal_sign(&mut v, c) => {}
+                _ => {
+                    if let Ok(o) = Operation::try_from(c) {
+                        v.push(Token::Operation(o));
+                    } else if let Ok(o) = Condition::try_from(c) {
+                        v.push(Token::Condition(o));
+                    } else {
+                        v.push(Token::Char(c));
+                    }
                 }
             }
             start = pos + 1;
