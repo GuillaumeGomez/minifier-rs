@@ -505,6 +505,10 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
                     }
                     v.push(Token::Char(c));
                 },
+                c == ReservedChar::SemiColon && is_in_block == 0 => {
+                    is_in_media = false;
+                    v.push(Token::Char(c));
+                },
                 c == ReservedChar::EqualSign => {
                     match match v.last()
                                  .unwrap_or(&Token::Char(ReservedChar::Space))
