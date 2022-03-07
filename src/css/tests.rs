@@ -276,3 +276,11 @@ fn check_slash_slash() {
     let expected = "body{background-image:url(data:image/webp;base64,c//S4KP//ZZ/19Uj/UA==);}";
     assert_eq!(minify(s).expect("minify failed").as_str(), expected);
 }
+
+#[test]
+fn issue_80() {
+    assert_eq!(
+        minify("@import 'i';t{x: #fff;}").unwrap(),
+        "@import 'i';t{x:#fff;}",
+    );
+}
