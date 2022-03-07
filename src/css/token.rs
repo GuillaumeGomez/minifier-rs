@@ -465,38 +465,40 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
                 || v.last()
                     .unwrap_or(&Token::Char(ReservedChar::Space))
                     .is_a_media();
-            if_match! {
-                c == ReservedChar::Quote || c == ReservedChar::DoubleQuote => {
+            match c {
+                ReservedChar::Quote | ReservedChar::DoubleQuote => {
                     if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
                         v.push(s);
                     }
-                },
-                c == ReservedChar::Star &&
-                *v.last().unwrap_or(&Token::Char(ReservedChar::Space)) == ReservedChar::Slash => {
+                }
+                ReservedChar::Star
+                    if *v.last().unwrap_or(&Token::Char(ReservedChar::Space))
+                        == ReservedChar::Slash =>
+                {
                     v.pop();
                     if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
                         v.push(s);
                     }
-                },
-                c == ReservedChar::OpenBracket => {
+                }
+                ReservedChar::OpenBracket => {
                     if is_in_attribute_selector {
                         return Err("Already in attribute selector");
                     }
                     is_in_attribute_selector = true;
                     v.push(Token::Char(c));
-                },
-                c == ReservedChar::CloseBracket => {
+                }
+                ReservedChar::CloseBracket => {
                     if !is_in_attribute_selector {
                         return Err("Unexpected ']'");
                     }
                     is_in_attribute_selector = false;
                     v.push(Token::Char(c));
-                },
-                c == ReservedChar::OpenCurlyBrace => {
+                }
+                ReservedChar::OpenCurlyBrace => {
                     is_in_block += 1;
                     v.push(Token::Char(c));
-                },
-                c == ReservedChar::CloseCurlyBrace => {
+                }
+                ReservedChar::CloseCurlyBrace => {
                     is_in_block -= 1;
                     if is_in_block < 0 {
                         return Err("Too much '}'");
@@ -504,18 +506,22 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
                         is_in_media = false;
                     }
                     v.push(Token::Char(c));
-                },
-                c == ReservedChar::SemiColon && is_in_block == 0 => {
+                }
+                ReservedChar::SemiColon if is_in_block == 0 => {
                     is_in_media = false;
                     v.push(Token::Char(c));
-                },
-                c == ReservedChar::EqualSign => {
-                    match match v.last()
-                                 .unwrap_or(&Token::Char(ReservedChar::Space))
-                                 .get_char()
-                                 .unwrap_or(ReservedChar::Space) {
+                }
+                ReservedChar::EqualSign => {
+                    match match v
+                        .last()
+                        .unwrap_or(&Token::Char(ReservedChar::Space))
+                        .get_char()
+                        .unwrap_or(ReservedChar::Space)
+                    {
                         ReservedChar::Tilde => Some(SelectorOperator::OneAttributeEquals),
-                        ReservedChar::Pipe => Some(SelectorOperator::EqualsOrStartsWithFollowedByDash),
+                        ReservedChar::Pipe => {
+                            Some(SelectorOperator::EqualsOrStartsWithFollowedByDash)
+                        }
                         ReservedChar::Dollar => Some(SelectorOperator::EndsWith),
                         ReservedChar::Circumflex => Some(SelectorOperator::FirstStartsWith),
                         ReservedChar::Star => Some(SelectorOperator::Contains),
@@ -527,22 +533,36 @@ pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
                         }
                         None => v.push(Token::Char(c)),
                     }
-                },
-                !c.is_useless() => {
+                }
+                c if !c.is_useless() => {
                     v.push(Token::Char(c));
-                },
-                !v.last().unwrap_or(&Token::Char(ReservedChar::Space)).is_useless() &&
-                (!v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_char() ||
-                 v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace)).is_operator() ||
-                 v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
-                         .get_char() == Some(ReservedChar::CloseParenthese) ||
-                 v.last().unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
-                         .get_char() == Some(ReservedChar::CloseBracket)) => {
-                    v.push(Token::Char(ReservedChar::Space));
-                },
-                let Ok(op) = Operator::try_from(c) => {
-                    v.push(Token::Operator(op));
-                },
+                }
+                c => {
+                    if !v
+                        .last()
+                        .unwrap_or(&Token::Char(ReservedChar::Space))
+                        .is_useless()
+                        && (!v
+                            .last()
+                            .unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
+                            .is_char()
+                            || v.last()
+                                .unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
+                                .is_operator()
+                            || v.last()
+                                .unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
+                                .get_char()
+                                == Some(ReservedChar::CloseParenthese)
+                            || v.last()
+                                .unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
+                                .get_char()
+                                == Some(ReservedChar::CloseBracket))
+                    {
+                        v.push(Token::Char(ReservedChar::Space));
+                    } else if let Ok(op) = Operator::try_from(c) {
+                        v.push(Token::Operator(op));
+                    }
+                }
             }
             start = pos + 1;
         }

@@ -49,26 +49,15 @@ where
                 .open(out.clone())
             {
                 if let Err(e) = write!(file, "{}", func(&content)) {
-                    writeln!(
-                        &mut io::stderr(),
-                        "Impossible to write into {:?}: {}",
-                        out,
-                        e
-                    )
-                    .unwrap();
+                    eprintln!("Impossible to write into {:?}: {}", out, e);
                 } else {
                     println!("{:?}: done -> generated into {:?}", file_path, out);
                 }
             } else {
-                writeln!(
-                    &mut io::stderr(),
-                    "Impossible to create new file: {:?}",
-                    out
-                )
-                .unwrap();
+                eprintln!("Impossible to create new file: {:?}", out);
             }
         }
-        Err(e) => writeln!(&mut io::stderr(), "\"{}\": {}", file_path, e).unwrap(),
+        Err(e) => eprintln!("\"{}\": {}", file_path, e),
     }
 }
 
@@ -84,7 +73,7 @@ fn main() {
         let p = Path::new(arg);
 
         if !p.is_file() {
-            writeln!(&mut io::stderr(), "\"{}\" isn't a file", arg).unwrap();
+            eprintln!("\"{}\" isn't a file", arg);
             continue;
         }
         match p
