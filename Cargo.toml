@@ -18,7 +18,7 @@ travis-ci = { repository = "GuillaumeGomez/minifier-rs" }
 html = ["regex"]
 
 [dependencies]
-regex = { version = "1.0", optional = true }
+regex = { version = "1.5.5", optional = true }
 
 [lib]
 name = "minifier"
