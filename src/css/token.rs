@@ -427,7 +427,7 @@ fn fill_other<'a>(
 }
 
 #[allow(clippy::comparison_chain)]
-pub fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
+pub(super) fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
     let mut v = Vec::with_capacity(1000);
     let mut iterator = source.char_indices().peekable();
     let mut start = 0;
@@ -624,10 +624,19 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Tokens<'a>(pub Vec<Token<'a>>);
+pub(super) struct Tokens<'a>(Vec<Token<'a>>);
+
+impl<'a> Tokens<'a> {
+    pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
+        for token in self.0.iter() {
+            write!(w, "{}", token)?;
+        }
+        Ok(())
+    }
+}
 
 impl<'a> fmt::Display for Tokens<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for token in self.0.iter() {
             write!(f, "{}", token)?;
         }

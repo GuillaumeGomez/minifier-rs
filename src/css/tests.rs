@@ -152,7 +152,7 @@ a[target = "_blank"] {
 "#;
     let expected = r#"/*! Baguette! */
 .b>p+div:hover{background:#fff;}a[target="_blank"]{border:1px solid yellow;}"#;
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
@@ -189,68 +189,68 @@ h2, h3:not(.impl):not(.method):not(.type) {
                     @media (max-width:700px){.theme-picker{left:10px;top:54px;z-index:1;\
                     background-color:rgba(0,0,0,0);font:15px \"SFMono-Regular\",Consolas,\
                     \"Liberation Mono\",Menlo,Courier,monospace;}}";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
 fn check_calc() {
     let s = ".foo { width: calc(100% - 34px); }";
     let expected = ".foo{width:calc(100% - 34px);}";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
 fn check_spaces() {
     let s = ".line-numbers .line-highlighted { color: #0a042f !important; }";
     let expected = ".line-numbers .line-highlighted{color:#0a042f !important;}";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
 fn check_space_after_paren() {
     let s = ".docblock:not(.type-decl) a:not(.srclink) {}";
     let expected = ".docblock:not(.type-decl) a:not(.srclink){}";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
 fn check_space_after_and() {
     let s = "@media only screen and (max-width : 600px) {}";
     let expected = "@media only screen and (max-width:600px){}";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
 fn check_space_after_or_not() {
     let s = "@supports not ((text-align-last: justify) or (-moz-text-align-last: justify)) {}";
     let expected = "@supports not ((text-align-last:justify) or (-moz-text-align-last:justify)){}";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
 fn check_space_after_brackets() {
     let s = "#main[data-behavior = \"1\"] {}";
     let expected = "#main[data-behavior=\"1\"]{}";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 
     let s = "#main[data-behavior = \"1\"] .aclass";
     let expected = "#main[data-behavior=\"1\"] .aclass";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 
     let s = "#main[data-behavior = \"1\"] ul.aclass";
     let expected = "#main[data-behavior=\"1\"] ul.aclass";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
 fn check_whitespaces_in_calc() {
     let s = ".foo { width: calc(130px     + 10%); }";
     let expected = ".foo{width:calc(130px + 10%);}";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 
     let s = ".foo { width: calc(130px + (45% - 10% +   (12   *   2px))); }";
     let expected = ".foo{width:calc(130px + (45% - 10% + (12 * 2px)));}";
-    assert_eq!(minify(s).expect("minify failed"), expected.to_owned());
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
@@ -265,7 +265,7 @@ fn check_weird_comments() {
     font-weight: 30em;
 }/**/";
     let expected = ".test1{font-weight:30em;}.test2{font-weight:30em;}.test3{font-weight:30em;}";
-    assert_eq!(minify(s).expect("minify failed").as_str(), expected);
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
@@ -274,13 +274,13 @@ fn check_slash_slash() {
     background-image: url(data:image/webp;base64,c//S4KP//ZZ/19Uj/UA==);
 }";
     let expected = "body{background-image:url(data:image/webp;base64,c//S4KP//ZZ/19Uj/UA==);}";
-    assert_eq!(minify(s).expect("minify failed").as_str(), expected);
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
 }
 
 #[test]
 fn issue_80() {
     assert_eq!(
-        minify("@import 'i';t{x: #fff;}").unwrap(),
+        minify("@import 'i';t{x: #fff;}").unwrap().to_string(),
         "@import 'i';t{x:#fff;}",
     );
 }

@@ -82,7 +82,9 @@ fn main() {
             .to_str()
             .unwrap_or("")
         {
-            "css" => call_minifier(arg, |s| css::minify(s).expect("css minification failed")),
+            "css" => call_minifier(arg, |s| {
+                css::minify(s).expect("css minification failed").to_string()
+            }),
             "js" => call_minifier(arg, js::minify),
             "json" => call_minifier(arg, json::minify),
             // "html" | "htm" => call_minifier(arg, html::minify),
