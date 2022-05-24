@@ -994,7 +994,7 @@ pub fn tokenize(source: &str) -> Tokens<'_> {
     Tokens(v)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Tokens<'a>(pub Vec<Token<'a>>);
 
 impl<'a> fmt::Display for Tokens<'a> {
