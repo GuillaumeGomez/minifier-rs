@@ -578,7 +578,13 @@ fn get_regex<'a>(
             | Token::Char(ReservedChar::Comma)
             | Token::Char(ReservedChar::OpenBracket)
             | Token::Char(ReservedChar::OpenParenthese)
-            | Token::Operation(Operation::Equal) => break,
+            | Token::Char(ReservedChar::ExclamationMark)
+            | Token::Char(ReservedChar::OpenCurlyBrace)
+            | Token::Char(ReservedChar::QuestionMark)
+            | Token::Char(ReservedChar::Backline)
+            | Token::Char(ReservedChar::Pipe)
+            | Token::Char(ReservedChar::Ampersand) => break,
+            t if t.is_operation() || t.is_condition() => break,
             _ => return None,
         }
     }
@@ -1307,6 +1313,34 @@ fn division_by_id() {
             Token::Number(100),
             Token::Operation(Operation::Divide),
             Token::Other("abc")
+        ]
+    );
+}
+
+#[test]
+fn weird_regex() {
+    let source = "if (!/\\/(contact|legal)\\//.test(a)) {}";
+
+    let v = tokenize(source).apply(::js::clean_tokens);
+    assert_eq!(
+        &v.0,
+        &[
+            Token::Keyword(Keyword::If),
+            Token::Char(ReservedChar::OpenParenthese),
+            Token::Char(ReservedChar::ExclamationMark),
+            Token::Regex {
+                regex: "\\/(contact|legal)\\/",
+                is_global: false,
+                is_interactive: false
+            },
+            Token::Char(ReservedChar::Dot),
+            Token::Other("test"),
+            Token::Char(ReservedChar::OpenParenthese),
+            Token::Other("a"),
+            Token::Char(ReservedChar::CloseParenthese),
+            Token::Char(ReservedChar::CloseParenthese),
+            Token::Char(ReservedChar::OpenCurlyBrace),
+            Token::Char(ReservedChar::CloseCurlyBrace),
         ]
     );
 }
