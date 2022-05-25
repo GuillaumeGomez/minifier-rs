@@ -630,7 +630,7 @@ fn get_comment<'a>(
     source: &'a str,
     iterator: &mut MyPeekable<'_>,
     start_pos: &mut usize,
-) -> Option<Token<'a>> {
+) -> Token<'a> {
     let mut prev = ReservedChar::Quote;
     *start_pos += 1;
     let builder = if let Some((_, c)) = iterator.next() {
@@ -647,19 +647,23 @@ fn get_comment<'a>(
         Token::Comment
     };
 
+    let mut current_pos = *start_pos;
     for (pos, c) in iterator {
+        current_pos = pos;
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Slash && prev == ReservedChar::Star {
-                let ret = Some(builder(&source[*start_pos..pos - 1]));
-                *start_pos = pos;
-                return ret;
+                current_pos -= 2;
+                break;
             }
             prev = c;
         } else {
             prev = ReservedChar::Space;
         }
     }
-    None
+    // Unclosed comment so returning it anyway...
+    let ret = builder(&source[*start_pos..=current_pos]);
+    *start_pos = current_pos + 2;
+    ret
 }
 
 fn get_string<'a>(
@@ -972,9 +976,7 @@ pub fn tokenize(source: &str) -> Tokens<'_> {
                         .eq_operation(Operation::Divide) =>
                 {
                     v.pop();
-                    if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
-                        v.push(s);
-                    }
+                    v.push(get_comment(source, &mut iterator, &mut pos));
                 }
                 ReservedChar::Pipe
                     if v.last()
@@ -1357,5 +1359,60 @@ fn weird_regex() {
             Token::Char(ReservedChar::OpenCurlyBrace),
             Token::Char(ReservedChar::CloseCurlyBrace),
         ]
+    );
+}
+
+#[test]
+fn test_regexes() {
+    let source = "/\\/(contact|legal)\\//.test";
+
+    let v = tokenize(source).apply(::js::clean_tokens);
+    assert_eq!(
+        &v.0,
+        &[
+            Token::Regex {
+                regex: "\\/(contact|legal)\\/",
+                is_global: false,
+                is_interactive: false
+            },
+            Token::Char(ReservedChar::Dot),
+            Token::Other("test"),
+        ]
+    );
+
+    let source = "/\\*(contact|legal)/.test";
+
+    let v = tokenize(source).apply(::js::clean_tokens);
+    assert_eq!(
+        &v.0,
+        &[
+            Token::Regex {
+                regex: "\\*(contact|legal)",
+                is_global: false,
+                is_interactive: false
+            },
+            Token::Char(ReservedChar::Dot),
+            Token::Other("test"),
+        ]
+    );
+}
+
+#[test]
+fn test_comments() {
+    let source = "/*(contact|legal)/.test";
+
+    let v = tokenize(source);
+    assert_eq!(&v.0, &[Token::Comment("(contact|legal)/.test"),],);
+
+    let source = "/*(contact|legal)/.test*/ a";
+
+    let v = tokenize(source);
+    assert_eq!(
+        &v.0,
+        &[
+            Token::Comment("(contact|legal)/.test"),
+            Token::Char(ReservedChar::Space),
+            Token::Other("a"),
+        ],
     );
 }
