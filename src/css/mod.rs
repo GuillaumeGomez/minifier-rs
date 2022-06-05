@@ -9,7 +9,6 @@ mod token;
 /// # Example
 ///
 /// ```rust
-/// extern crate minifier;
 /// use minifier::css::minify;
 ///
 /// fn main() {
@@ -17,7 +16,8 @@ mod token;
 ///         .foo > p {
 ///             color: red;
 ///         }"#.into();
-///     let css_minified = minify(css);
+///     let css_minified = minify(css).expect("minification failed");
+///     assert_eq!(&css_minified.to_string(), ".foo>p{color:red;}");
 /// }
 /// ```
 pub fn minify<'a>(content: &'a str) -> Result<Minified<'a>, &'static str> {

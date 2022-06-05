@@ -25,7 +25,6 @@ type JsonMethod = fn(&mut JsonMinifier, &char, Option<&char>) -> bool;
 /// # Example
 ///
 /// ```rust
-/// extern crate minifier;
 /// use minifier::json::minify;
 ///
 /// fn main() {

@@ -170,7 +170,6 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 /// # Example
 ///
 /// ```rust
-/// extern crate minifier;
 /// use minifier::js::minify;
 ///
 /// fn main() {
@@ -180,7 +179,11 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 ///                func(data[i]);
 ///            }
 ///         }"#.into();
-///     let js_minified = minify(js).to_string();
+///     let js_minified = minify(js);
+///     assert_eq!(
+///         &js_minified.to_string(),
+///         "function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i])}}",
+///     );
 /// }
 /// ```
 #[inline]
