@@ -1,6 +1,6 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
-use json::read::internal_reader::InternalReader;
+use crate::json::read::internal_reader::InternalReader;
 use std::{
     error, fmt,
     io::{Error, Read},
@@ -31,7 +31,7 @@ impl<R: Read> ByteToChar<R> {
 }
 
 impl<R: Read + fmt::Debug> fmt::Debug for ByteToChar<R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Filter").field("iter", &self.iter).finish()
     }
 }
@@ -123,7 +123,7 @@ impl error::Error for CharsError {
 }
 
 impl fmt::Display for CharsError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             CharsError::NotUtf8 => "byte stream did not contain valid utf8".fmt(f),
             CharsError::Other(ref e) => e.fmt(f),

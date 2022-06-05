@@ -31,7 +31,7 @@ impl<R: Read> InternalReader<R> {
 }
 
 impl<R: Read + fmt::Debug> fmt::Debug for InternalReader<R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("JsonReader")
             .field("read", &self.read)
             .field("buffer_size", &self.buffer_size)

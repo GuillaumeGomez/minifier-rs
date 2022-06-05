@@ -1,6 +1,6 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
-use json::{
+use crate::json::{
     json_minifier::{keep_element, JsonMinifier},
     read::json_read::JsonRead,
     string::JsonMultiFilter,

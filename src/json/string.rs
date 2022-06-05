@@ -1,6 +1,7 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
-use json::json_minifier::JsonMinifier;
+use crate::json::json_minifier::JsonMinifier;
+
 use std::fmt;
 use std::str::Chars;
 
@@ -27,7 +28,7 @@ impl<'a, P: Clone> JsonMultiFilter<'a, P> {
 }
 
 impl<'a, P: Clone> fmt::Debug for JsonMultiFilter<'a, P> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Filter")
             .field("minifier", &self.minifier)
             .field("iter", &self.iter)

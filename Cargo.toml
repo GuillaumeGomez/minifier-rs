@@ -9,6 +9,7 @@ documentation = "https://docs.rs/minifier-rs"
 readme = "README.md"
 keywords = ["minify", "minifier", "JS", "HTML", "CSS"]
 license = "MIT"
+edition = "2021"
 
 [badges]
 appveyor = { repository = "GuillaumeGomez/minifier-rs", service = "github" }

@@ -33,7 +33,7 @@ pub enum ReservedChar {
 }
 
 impl fmt::Display for ReservedChar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -121,7 +121,7 @@ pub enum Operator {
 }
 
 impl fmt::Display for Operator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -176,7 +176,7 @@ pub enum SelectorElement<'a> {
 impl<'a> TryFrom<&'a str> for SelectorElement<'a> {
     type Error = &'static str;
 
-    fn try_from(value: &'a str) -> Result<SelectorElement, Self::Error> {
+    fn try_from(value: &'a str) -> Result<SelectorElement<'_>, Self::Error> {
         if let Some(value) = value.strip_prefix('.') {
             if value.is_empty() {
                 Err("cannot determine selector")
@@ -210,7 +210,7 @@ impl<'a> TryFrom<&'a str> for SelectorElement<'a> {
 }
 
 impl<'a> fmt::Display for SelectorElement<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             SelectorElement::Class(c) => write!(f, ".{}", c),
             SelectorElement::Id(i) => write!(f, "#{}", i),
@@ -236,7 +236,7 @@ pub enum SelectorOperator {
 }
 
 impl fmt::Display for SelectorOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             SelectorOperator::OneAttributeEquals => write!(f, "~="),
             SelectorOperator::EqualsOrStartsWithFollowedByDash => write!(f, "|="),
@@ -262,7 +262,7 @@ pub enum Token<'a> {
 }
 
 impl<'a> fmt::Display for Token<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             // Token::AtRule(at_rule) => write!(f, "{}", at_rule, content),
             // Token::ElementRule(selectors) => write!(f, "{}", x),
@@ -329,7 +329,7 @@ impl<'a> PartialEq<ReservedChar> for Token<'a> {
 
 fn get_comment<'a>(
     source: &'a str,
-    iterator: &mut Peekable<CharIndices>,
+    iterator: &mut Peekable<CharIndices<'_>>,
     start_pos: &mut usize,
 ) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
@@ -365,7 +365,7 @@ fn get_comment<'a>(
 
 fn get_string<'a>(
     source: &'a str,
-    iterator: &mut Peekable<CharIndices>,
+    iterator: &mut Peekable<CharIndices<'_>>,
     start_pos: &mut usize,
     start: ReservedChar,
 ) -> Option<Token<'a>> {
