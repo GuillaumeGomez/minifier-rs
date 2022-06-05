@@ -2,8 +2,8 @@
 
 use std::{fmt, io};
 
-use js::token::{self, Keyword, ReservedChar, Token, Tokens};
-use js::utils::{get_array, get_variable_name_and_value_positions, VariableNameGenerator};
+use crate::js::token::{self, Keyword, ReservedChar, Token, Tokens};
+use crate::js::utils::{get_array, get_variable_name_and_value_positions, VariableNameGenerator};
 
 use std::collections::{HashMap, HashSet};
 
@@ -186,7 +186,7 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 /// ```
 #[inline]
 pub fn minify(source: &str) -> Minified<'_> {
-    Minified(token::tokenize(source).apply(::js::clean_tokens))
+    Minified(token::tokenize(source).apply(crate::js::clean_tokens))
 }
 
 pub struct Minified<'a>(token::Tokens<'a>);
@@ -647,7 +647,7 @@ fn aggregate_strings_in_array() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
     assert_eq!(result, expected_result);
@@ -658,7 +658,7 @@ fn aggregate_strings_in_array() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|c| {
             aggregate_strings_into_array_with_separation(
                 c,
@@ -675,7 +675,7 @@ fn aggregate_strings_in_array() {
                            R[2],R[2]]";
 
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|c| {
             aggregate_strings_into_array_with_separation(
                 c,
@@ -693,7 +693,7 @@ fn aggregate_strings_in_array_filter() {
     let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],'duplicate_paths':R[1]}";
 
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|c| {
             aggregate_strings_into_array_with_separation_filter(
                 c,
@@ -713,7 +713,7 @@ fn aggregate_strings_in_array_filter() {
     let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\",\"duplicate_paths\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],R[2]:R[1],'x':R[2]}";
 
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|c| {
             aggregate_strings_into_array_with_separation_filter(
                 c,
@@ -738,7 +738,7 @@ fn aggregate_strings_in_array_existing() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
     assert_eq!(result, expected_result);
@@ -749,7 +749,7 @@ fn aggregate_strings_in_array_existing() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
     assert_eq!(result, expected_result);
@@ -760,7 +760,7 @@ fn aggregate_strings_in_array_existing() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
 
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
     assert_eq!(result, expected_result);
@@ -772,7 +772,7 @@ fn aggregate_strings_in_array_existing() {
                            var x=[R[3],R[3],\"another nice string\",R[4],R[4],R[3],R[4],R[4],R[4]]";
 
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
     assert_eq!(result, expected_result);
@@ -787,7 +787,7 @@ fn string_duplicates() {
 
     let result = simple_minify(source)
         .apply(aggregate_strings)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .to_string();
     assert_eq!(result, expected_result);
 }
@@ -802,7 +802,7 @@ fn already_existing_var() {
 
     let result = simple_minify(source)
         .apply(aggregate_strings)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .to_string();
     assert_eq!(result, expected_result);
 }
@@ -817,7 +817,7 @@ fn string_duplicates_variables_already_exist() {
 
     let result = simple_minify(source)
         .apply(aggregate_strings)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .to_string();
     assert_eq!(result, expected_result);
 }
@@ -831,7 +831,7 @@ fn string_duplicates_with_separator() {
     let expected_result = "var r_aa=\"a nice string\",r_ba=\"cake!\";\nvar x=[r_aa,r_aa,\
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba]";
     let result = simple_minify(source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(|f| aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline)))
         .to_string();
     assert_eq!(result, expected_result);
@@ -849,7 +849,9 @@ var y="salut";
 var z="ok!""#;
 
     let result = simple_minify(source)
-        .apply(|f| ::js::clean_tokens_except(f, |c| c.get_char() != Some(ReservedChar::Backline)))
+        .apply(|f| {
+            crate::js::clean_tokens_except(f, |c| c.get_char() != Some(ReservedChar::Backline))
+        })
         .to_string();
     assert_eq!(result, expected);
 }
@@ -863,7 +865,7 @@ fn clean_except2() {
 
     let result = simple_minify(source)
         .apply(|f| {
-            ::js::clean_tokens_except(f, |c| {
+            crate::js::clean_tokens_except(f, |c| {
                 c.get_char() != Some(ReservedChar::Space)
                     && c.get_char() != Some(ReservedChar::SemiColon)
             })
@@ -881,7 +883,7 @@ fn clean_except3() {
 
     let result = simple_minify(source)
         .apply(|f| {
-            ::js::clean_tokens_except(f, |c| {
+            crate::js::clean_tokens_except(f, |c| {
                 c.get_char() != Some(ReservedChar::Tab)
                     && c.get_char() != Some(ReservedChar::SemiColon)
             })
@@ -892,10 +894,10 @@ fn clean_except3() {
 
 #[test]
 fn name_generator() {
-    let s = ::std::iter::repeat('a').take(36).collect::<String>();
+    let s = std::iter::repeat('a').take(36).collect::<String>();
     // We need to generate enough long strings to reach the point that the name generator
     // generates names with 3 characters.
-    let s = ::std::iter::repeat(s)
+    let s = std::iter::repeat(s)
         .take(20000)
         .enumerate()
         .map(|(pos, s)| format!("{}{}", s, pos))
@@ -908,7 +910,7 @@ fn name_generator() {
             .join(",")
     );
     let result = simple_minify(&source)
-        .apply(::js::clean_tokens)
+        .apply(crate::js::clean_tokens)
         .apply(aggregate_strings)
         .to_string();
     assert!(result.find(",r_aaa=").is_some());

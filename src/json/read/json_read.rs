@@ -1,6 +1,6 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
-use json::{
+use crate::json::{
     json_minifier::JsonMinifier,
     read::byte_to_char::{ByteToChar, CharsError},
 };

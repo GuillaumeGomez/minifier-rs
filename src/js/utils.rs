@@ -1,6 +1,6 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
-use js::token::{Keyword, Operation, ReservedChar, Token, Tokens};
+use crate::js::token::{Keyword, Operation, ReservedChar, Token, Tokens};
 use std::vec::IntoIter;
 
 pub(crate) struct VariableNameGenerator<'a> {
@@ -477,7 +477,7 @@ fn check_get_array() {
     let source = r#"var x = [  ]; var y = ['hello',
     12]; var z = []; var w = 12;"#;
 
-    let tokens = ::js::token::tokenize(source);
+    let tokens = crate::js::token::tokenize(source);
 
     let ar = get_array(&tokens, "x");
     assert!(ar.is_some());
@@ -504,7 +504,7 @@ fn check_get_variable_name_and_value_positions() {
     let mut result = Vec::new();
     let mut pos = 0;
 
-    let tokens = ::js::token::tokenize(source);
+    let tokens = crate::js::token::tokenize(source);
 
     while pos < tokens.len() {
         if let Some(x) = get_variable_name_and_value_positions(&tokens, pos) {
@@ -516,7 +516,7 @@ fn check_get_variable_name_and_value_positions() {
     assert_eq!(result, vec![(2, Some(6)), (10, Some(18)), (20, Some(22))]);
 
     let mut result = Vec::new();
-    let tokens = ::js::clean_tokens(tokens);
+    let tokens = crate::js::clean_tokens(tokens);
     pos = 0;
 
     while pos < tokens.len() {
@@ -537,8 +537,8 @@ var n = null;
 "#;
     let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N";
 
-    let res = ::js::simple_minify(source)
-        .apply(::js::clean_tokens)
+    let res = crate::js::simple_minify(source)
+        .apply(crate::js::clean_tokens)
         .apply(|f| {
             replace_tokens_with(f, |t| {
                 if *t == Token::Keyword(Keyword::Null) {
@@ -559,9 +559,9 @@ var n = null;
 "#;
     let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
 
-    let res: Tokens = ::js::simple_minify(source)
+    let res: Tokens = crate::js::simple_minify(source)
         .into_iter()
-        .filter(|(x, next)| ::js::clean_token(x, next))
+        .filter(|(x, next)| crate::js::clean_token(x, next))
         .map(|(t, _)| {
             if t == Token::Keyword(Keyword::Null) {
                 Token::Other("N")

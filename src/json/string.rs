@@ -1,6 +1,7 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
-use json::json_minifier::JsonMinifier;
+use crate::json::json_minifier::JsonMinifier;
+
 use std::fmt;
 use std::str::Chars;
 

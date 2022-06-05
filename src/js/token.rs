@@ -1084,12 +1084,12 @@ impl<'a> Iterator for IntoIterTokens<'a> {
             let ret = self.inner.0.pop().expect("pop() failed");
             // FIXME once generic traits' types are stabilized, use a second
             // lifetime instead of transmute!
-            Some((ret, unsafe { ::std::mem::transmute(self.inner.0.last()) }))
+            Some((ret, unsafe { std::mem::transmute(self.inner.0.last()) }))
         }
     }
 }
 
-impl<'a> ::std::ops::Deref for Tokens<'a> {
+impl<'a> std::ops::Deref for Tokens<'a> {
     type Target = Vec<Token<'a>>;
 
     fn deref(&self) -> &Self::Target {
@@ -1113,9 +1113,9 @@ impl<'a> From<&[Token<'a>]> for Tokens<'a> {
 fn check_regex() {
     let source = r#"var x = /"\.x/g;"#;
     let expected_result = r#"var x=/"\.x/g"#;
-    assert_eq!(::js::minify(source).to_string(), expected_result);
+    assert_eq!(crate::js::minify(source).to_string(), expected_result);
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1127,9 +1127,9 @@ fn check_regex() {
 
     let source = r#"var x = /"\.x/gigigigig;var x = "hello";"#;
     let expected_result = r#"var x=/"\.x/gi;var x="hello""#;
-    assert_eq!(::js::minify(source).to_string(), expected_result);
+    assert_eq!(crate::js::minify(source).to_string(), expected_result);
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1144,9 +1144,9 @@ fn check_regex() {
 fn more_regex() {
     let source = r#"var x = /"\.x\/a/i;"#;
     let expected_result = r#"var x=/"\.x\/a/i"#;
-    assert_eq!(::js::minify(source).to_string(), expected_result);
+    assert_eq!(crate::js::minify(source).to_string(), expected_result);
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1158,9 +1158,9 @@ fn more_regex() {
 
     let source = r#"var x = /\\/i;"#;
     let expected_result = r#"var x=/\\/i"#;
-    assert_eq!(::js::minify(source).to_string(), expected_result);
+    assert_eq!(crate::js::minify(source).to_string(), expected_result);
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1175,7 +1175,7 @@ fn more_regex() {
 fn even_more_regex() {
     let source = r#"var x = /a-z /;"#;
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1190,7 +1190,7 @@ fn even_more_regex() {
 fn not_regex_test() {
     let source = "( x ) / 2; x / y;x /= y";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1212,7 +1212,7 @@ fn not_regex_test() {
 
     let source = "let x = /x\ny/;";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1231,7 +1231,7 @@ fn not_regex_test() {
 fn test_tokens_parsing() {
     let source = "true = == 2.3 === 32";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1249,7 +1249,7 @@ fn test_tokens_parsing() {
 fn test_string_parsing() {
     let source = "var x = 'hello people!'";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1265,7 +1265,7 @@ fn test_string_parsing() {
 fn test_number_parsing() {
     let source = "var x = .12; let y = 4.; var z = 12; .3 4. 'a' let u = 12.2";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1299,7 +1299,7 @@ fn test_number_parsing() {
 fn test_number_parsing2() {
     let source = "var x = 12.a;";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1317,7 +1317,7 @@ fn test_number_parsing2() {
 fn tokens_spaces() {
     let source = "t in e";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1332,7 +1332,7 @@ fn tokens_spaces() {
 fn division_by_id() {
     let source = "100/abc";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1347,7 +1347,7 @@ fn division_by_id() {
 fn weird_regex() {
     let source = "if (!/\\/(contact|legal)\\//.test(a)) {}";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1375,7 +1375,7 @@ fn weird_regex() {
 fn test_regexes() {
     let source = "/\\/(contact|legal)\\//.test";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1391,7 +1391,7 @@ fn test_regexes() {
 
     let source = "/\\*(contact|legal)/.test";
 
-    let v = tokenize(source).apply(::js::clean_tokens);
+    let v = tokenize(source).apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[

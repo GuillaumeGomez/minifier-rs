@@ -1,6 +1,6 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
-use css::minify;
+use crate::css::minify;
 
 /*enum Element {
     /// Rule starting with `@`:
