@@ -57,5 +57,5 @@ fn test_minification() {
 
     let source = include_str!("./files/main.js");
     let expected_result = include_str!("./files/minified_main.js");
-    compare_strs(&minify(source), expected_result);
+    compare_strs(&minify(source).to_string(), expected_result);
 }

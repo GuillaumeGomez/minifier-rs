@@ -1,6 +1,6 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JsonMinifier {
     pub is_string: bool,
     pub escaped_quotation: u8,

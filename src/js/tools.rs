@@ -1,5 +1,7 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
+use std::{fmt, io};
+
 use js::token::{self, Keyword, ReservedChar, Token, Tokens};
 use js::utils::{get_array, get_variable_name_and_value_positions, VariableNameGenerator};
 
@@ -168,24 +170,37 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 /// # Example
 ///
 /// ```rust
-/// extern crate minifier;
 /// use minifier::js::minify;
 ///
-/// fn main() {
-///     let js = r#"
-///         function forEach(data, func) {
-///            for (var i = 0; i < data.length; ++i) {
-///                func(data[i]);
-///            }
-///         }"#.into();
-///     let js_minified = minify(js);
-/// }
+/// let js = r#"
+///     function forEach(data, func) {
+///        for (var i = 0; i < data.length; ++i) {
+///            func(data[i]);
+///        }
+///     }"#.into();
+/// let js_minified = minify(js);
+/// assert_eq!(
+///     &js_minified.to_string(),
+///     "function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i])}}",
+/// );
 /// ```
 #[inline]
-pub fn minify(source: &str) -> String {
-    token::tokenize(source)
-        .apply(::js::clean_tokens)
-        .to_string()
+pub fn minify(source: &str) -> Minified<'_> {
+    Minified(token::tokenize(source).apply(::js::clean_tokens))
+}
+
+pub struct Minified<'a>(token::Tokens<'a>);
+
+impl<'a> Minified<'a> {
+    pub fn write<W: io::Write>(self, w: W) -> io::Result<()> {
+        self.0.write(w)
+    }
+}
+
+impl<'a> fmt::Display for Minified<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
 }
 
 // TODO: No scope handling or anything. Might be nice as a second step to add it...
@@ -219,7 +234,6 @@ fn get_variables_name<'a>(
     (ret, variables)
 }
 
-#[inline]
 fn aggregate_strings_inner<'a, 'b: 'a>(
     mut tokens: Tokens<'a>,
     separation_token: Option<Token<'b>>,
@@ -386,7 +400,6 @@ pub fn aggregate_strings_with_separation<'a, 'b: 'a>(
     aggregate_strings_inner(tokens, Some(separation_token))
 }
 
-#[inline]
 fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> bool>(
     mut tokens: Tokens<'a>,
     array_name: &str,
@@ -906,7 +919,7 @@ fn name_generator() {
 fn simple_quote() {
     let source = r#"var x = "\\";"#;
     let expected_result = r#"var x="\\""#;
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }
 
 #[test]
@@ -942,7 +955,7 @@ far_away(another_var, 12);
     let expected_result = "var foo=\"something\";var another_var=2348323;function far_away(x,y){\
                            var x2=x+4;return x*x2+y}far_away(another_var,12);far_away(another_var,\
                            12)";
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }
 
 #[test]
@@ -975,7 +988,7 @@ console.log('done!');
  *
  * right?
  */function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i])}}forEach([0,1,2,3,4,5,6,7,8,9],function(x){console.log(x)});console.log('done!')"#;
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }
 
 #[test]
@@ -992,7 +1005,7 @@ search_input.onchange = function(e) {
 "#;
     let expected_result = "search_input.onchange=function(e){clearTimeout(searchTimeout);\
                            setTimeout(search,0)}";
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }
 
 #[test]
@@ -1005,7 +1018,7 @@ for (var entry in results) {
 }"#;
     let expected_result = "for(var entry in results){if(results.hasOwnProperty(entry)){\
                            ar.push(results[entry])}}";
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }
 
 #[test]
@@ -1015,7 +1028,7 @@ val = val.replace(/\_/g, "");
 
 var valGenerics = extractGenerics(val);"#;
     let expected_result = "val=val.replace(/\\_/g,\"\");var valGenerics=extractGenerics(val)";
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }
 
 #[test]
@@ -1023,21 +1036,21 @@ fn keep_space() {
     let source = "return 12;return x;";
 
     let expected_result = "return 12;return x";
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 
-    assert_eq!("t in e", minify("t in e"));
-    assert_eq!("t+1 in e", minify("t + 1 in e"));
-    assert_eq!("t-1 in e", minify("t - 1 in e"));
-    assert_eq!("'a'in e", minify("'a' in e"));
-    assert_eq!("/a/g in e", minify("/a/g in e"));
-    assert_eq!("/a/i in e", minify("/a/i in e"));
+    assert_eq!("t in e", minify("t in e").to_string());
+    assert_eq!("t+1 in e", minify("t + 1 in e").to_string());
+    assert_eq!("t-1 in e", minify("t - 1 in e").to_string());
+    assert_eq!("'a'in e", minify("'a' in e").to_string());
+    assert_eq!("/a/g in e", minify("/a/g in e").to_string());
+    assert_eq!("/a/i in e", minify("/a/i in e").to_string());
 
-    assert_eq!("t instanceof e", minify("t instanceof e"));
-    assert_eq!("t+1 instanceof e", minify("t + 1 instanceof e"));
-    assert_eq!("t-1 instanceof e", minify("t - 1 instanceof e"));
-    assert_eq!("'a'instanceof e", minify("'a' instanceof e"));
-    assert_eq!("/a/g instanceof e", minify("/a/g instanceof e"));
-    assert_eq!("/a/i instanceof e", minify("/a/i instanceof e"));
+    assert_eq!("t instanceof e", minify("t instanceof e").to_string());
+    assert_eq!("t+1 instanceof e", minify("t + 1 instanceof e").to_string());
+    assert_eq!("t-1 instanceof e", minify("t - 1 instanceof e").to_string());
+    assert_eq!("'a'instanceof e", minify("'a' instanceof e").to_string());
+    assert_eq!("/a/g instanceof e", minify("/a/g instanceof e").to_string());
+    assert_eq!("/a/i instanceof e", minify("/a/i instanceof e").to_string());
 }
 
 #[test]
@@ -1045,7 +1058,7 @@ fn test_remove_extra_whitespace_before_typeof() {
     let source = "var x = typeof 'foo';var y = typeof x;case typeof 'foo': 'bla'";
 
     let expected_result = "var x=typeof'foo';var y=typeof x;case typeof'foo':'bla'";
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }
 
 #[test]
@@ -1055,7 +1068,7 @@ if (x in ev && typeof ev) { return true; }
 if (true in ev) { return true; }"#;
 
     let expected_result = r#"if("key"in ev&&typeof ev){return true}if(x in ev&&typeof ev){return true}if(true in ev){return true}"#;
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }
 
 #[test]
@@ -1063,21 +1076,21 @@ fn test_remove_extra_whitespace_before_operator() {
     let source = "( x ) / 2; x / y;x /= y";
 
     let expected_result = "(x)/2;x/y;x/=y";
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }
 
 #[test]
 fn check_regex_syntax() {
     let source = "console.log(/MSIE|Trident|Edge/.test(window.navigator.userAgent));";
     let expected = "console.log(/MSIE|Trident|Edge/.test(window.navigator.userAgent))";
-    assert_eq!(minify(source), expected);
+    assert_eq!(minify(source).to_string(), expected);
 }
 
 #[test]
 fn minify_minified() {
     let source = "function (i, n, a) { i[n].type.replace(/ *;(.|\\s)*/,\"\")===t&&a.push(i[n].MathJax.elementJax);return a}";
     let expected = "function(i,n,a){i[n].type.replace(/ *;(.|\\s)*/,\"\")===t&&a.push(i[n].MathJax.elementJax);return a}";
-    assert_eq!(minify(source), expected);
+    assert_eq!(minify(source).to_string(), expected);
 }
 
 #[test]
@@ -1090,7 +1103,7 @@ fn check_string() {
     "###;
     let expected = "const a=123;const b=\"123\";const c=`the number is ${a}  <-- note the spaces \
     here`;const d=`      ${a}         ${b}      `";
-    assert_eq!(minify(source), expected);
+    assert_eq!(minify(source).to_string(), expected);
 }
 
 // TODO: requires AST to fix this issue!
@@ -1102,7 +1115,7 @@ console.log(2)
 var x = 12;
 "#;
     let expected_result = r#"console.log(1);console.log(2);var x=12;"#;
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }*/
 
 // TODO: requires AST to fix this issue!
@@ -1115,5 +1128,5 @@ function foo() {
 }
 "#;
     let expected_result = r#"function foo(){return 12;}"#;
-    assert_eq!(minify(source), expected_result);
+    assert_eq!(minify(source).to_string(), expected_result);
 }*/

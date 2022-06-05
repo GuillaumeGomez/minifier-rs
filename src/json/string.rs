@@ -2,18 +2,20 @@
 
 use json::json_minifier::JsonMinifier;
 use std::fmt;
+use std::str::Chars;
 
-pub struct JsonMultiFilter<I: Iterator, P> {
+#[derive(Clone)]
+pub struct JsonMultiFilter<'a, P: Clone> {
     minifier: JsonMinifier,
-    iter: I,
+    iter: Chars<'a>,
     predicate: P,
     initialized: bool,
-    item1: Option<I::Item>,
+    item1: Option<<Chars<'a> as Iterator>::Item>,
 }
 
-impl<I: Iterator, P> JsonMultiFilter<I, P> {
+impl<'a, P: Clone> JsonMultiFilter<'a, P> {
     #[inline]
-    pub fn new(iter: I, predicate: P) -> Self {
+    pub fn new(iter: Chars<'a>, predicate: P) -> Self {
         JsonMultiFilter {
             minifier: JsonMinifier::default(),
             iter,
@@ -24,7 +26,7 @@ impl<I: Iterator, P> JsonMultiFilter<I, P> {
     }
 }
 
-impl<I: Iterator + fmt::Debug, P> fmt::Debug for JsonMultiFilter<I, P> {
+impl<'a, P: Clone> fmt::Debug for JsonMultiFilter<'a, P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Filter")
             .field("minifier", &self.minifier)
@@ -34,15 +36,18 @@ impl<I: Iterator + fmt::Debug, P> fmt::Debug for JsonMultiFilter<I, P> {
     }
 }
 
-impl<I, P> Iterator for JsonMultiFilter<I, P>
+impl<'a, P: Clone> Iterator for JsonMultiFilter<'a, P>
 where
-    I: Iterator,
-    P: FnMut(&mut JsonMinifier, &I::Item, Option<&I::Item>) -> bool,
+    P: FnMut(
+        &mut JsonMinifier,
+        &<Chars<'a> as Iterator>::Item,
+        Option<&<Chars<'a> as Iterator>::Item>,
+    ) -> bool,
 {
-    type Item = I::Item;
+    type Item = <Chars<'a> as Iterator>::Item;
 
     #[inline]
-    fn next(&mut self) -> Option<I::Item> {
+    fn next(&mut self) -> Option<<Chars<'a> as Iterator>::Item> {
         if !self.initialized {
             self.item1 = self.iter.next();
             self.initialized = true;
@@ -55,5 +60,40 @@ where
             }
         }
         None
+    }
+}
+
+impl<'a, P> JsonMultiFilter<'a, P>
+where
+    P: FnMut(
+            &mut JsonMinifier,
+            &<Chars<'a> as Iterator>::Item,
+            Option<&<Chars<'a> as Iterator>::Item>,
+        ) -> bool
+        + Clone,
+{
+    pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
+        for token in self {
+            write!(w, "{}", token)?;
+        }
+        Ok(())
+    }
+}
+
+impl<'a, P> fmt::Display for JsonMultiFilter<'a, P>
+where
+    P: FnMut(
+            &mut JsonMinifier,
+            &<Chars<'a> as Iterator>::Item,
+            Option<&<Chars<'a> as Iterator>::Item>,
+        ) -> bool
+        + Clone,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = (*self).clone();
+        for token in s {
+            write!(f, "{}", token)?;
+        }
+        Ok(())
     }
 }

@@ -39,7 +39,6 @@ impl<R: Read + fmt::Debug> fmt::Debug for ByteToChar<R> {
 impl<R: Read> Iterator for ByteToChar<R> {
     type Item = Result<char, CharsError>;
 
-    #[inline]
     fn next(&mut self) -> Option<Result<char, CharsError>> {
         let first_byte = match self.get_next() {
             Err(err) => return Some(Err(err)),

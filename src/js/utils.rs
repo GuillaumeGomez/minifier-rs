@@ -174,7 +174,6 @@ pub fn replace_token_with<'a, 'b: 'a, F: Fn(&Token<'a>) -> Option<Token<'b>>>(
 ///     assert_eq!(result, vec![(2, Some(6)), (10, None), (14, Some(22))]);
 /// }
 /// ```
-#[inline]
 pub fn get_variable_name_and_value_positions<'a>(
     tokens: &'a Tokens<'a>,
     pos: usize,
@@ -275,7 +274,6 @@ fn get_next<'a>(it: &mut IntoIter<Token<'a>>) -> Option<Token<'a>> {
 ///     println!("result: {:?}", s);
 /// }
 /// ```
-#[inline]
 pub fn clean_tokens(tokens: Tokens<'_>) -> Tokens<'_> {
     let mut v = Vec::with_capacity(tokens.len() / 3 * 2);
     let mut it = tokens.0.into_iter();
@@ -307,7 +305,6 @@ pub fn clean_tokens(tokens: Tokens<'_>) -> Tokens<'_> {
 
 /// Returns true if the token is a "useful" one (so not a comment or a "useless"
 /// character).
-#[inline]
 pub fn clean_token(token: &Token<'_>, next_token: &Option<&Token<'_>>) -> bool {
     !token.is_comment() && {
         if let Some(x) = token.get_char() {
@@ -358,7 +355,6 @@ fn get_next_except<'a, F: Fn(&Token<'a>) -> bool>(
 ///     println!("result: {:?}", s);
 /// }
 /// ```
-#[inline]
 pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(tokens: Tokens<'a>, f: F) -> Tokens<'a> {
     let mut v = Vec::with_capacity(tokens.len() / 3 * 2);
     let mut it = tokens.0.into_iter();
@@ -410,7 +406,6 @@ pub fn clean_token_except<'a, F: Fn(&Token<'a>) -> bool>(
     }
 }
 
-#[inline]
 pub(crate) fn get_array<'a>(
     tokens: &'a Tokens<'a>,
     array_name: &str,
