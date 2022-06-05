@@ -85,7 +85,7 @@ fn main() {
             "css" => call_minifier(arg, |s| {
                 css::minify(s).expect("css minification failed").to_string()
             }),
-            "js" => call_minifier(arg, js::minify),
+            "js" => call_minifier(arg, |s| js::minify(s).to_string()),
             "json" => call_minifier(arg, json::minify),
             // "html" | "htm" => call_minifier(arg, html::minify),
             x => println!("\"{}\": this format isn't supported", x),

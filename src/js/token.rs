@@ -1006,8 +1006,17 @@ pub fn tokenize(source: &str) -> Tokens<'_> {
 #[derive(Debug, PartialEq)]
 pub struct Tokens<'a>(pub Vec<Token<'a>>);
 
+impl<'a> Tokens<'a> {
+    pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
+        for token in self.0.iter() {
+            write!(w, "{}", token)?;
+        }
+        Ok(())
+    }
+}
+
 impl<'a> fmt::Display for Tokens<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let tokens = &self.0;
         for i in 0..tokens.len() {
             if i > 0
@@ -1096,7 +1105,7 @@ impl<'a> From<&[Token<'a>]> for Tokens<'a> {
 fn check_regex() {
     let source = r#"var x = /"\.x/g;"#;
     let expected_result = r#"var x=/"\.x/g"#;
-    assert_eq!(::js::minify(source), expected_result);
+    assert_eq!(::js::minify(source).to_string(), expected_result);
 
     let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(
@@ -1110,7 +1119,7 @@ fn check_regex() {
 
     let source = r#"var x = /"\.x/gigigigig;var x = "hello";"#;
     let expected_result = r#"var x=/"\.x/gi;var x="hello""#;
-    assert_eq!(::js::minify(source), expected_result);
+    assert_eq!(::js::minify(source).to_string(), expected_result);
 
     let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(
@@ -1127,7 +1136,7 @@ fn check_regex() {
 fn more_regex() {
     let source = r#"var x = /"\.x\/a/i;"#;
     let expected_result = r#"var x=/"\.x\/a/i"#;
-    assert_eq!(::js::minify(source), expected_result);
+    assert_eq!(::js::minify(source).to_string(), expected_result);
 
     let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(
@@ -1141,7 +1150,7 @@ fn more_regex() {
 
     let source = r#"var x = /\\/i;"#;
     let expected_result = r#"var x=/\\/i"#;
-    assert_eq!(::js::minify(source), expected_result);
+    assert_eq!(::js::minify(source).to_string(), expected_result);
 
     let v = tokenize(source).apply(::js::clean_tokens);
     assert_eq!(
