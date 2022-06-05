@@ -27,19 +27,17 @@ type JsonMethod = fn(&mut JsonMinifier, &char, Option<&char>) -> bool;
 /// ```rust
 /// use minifier::json::minify;
 ///
-/// fn main() {
-///     let json = r#"
-///            {
-///                "test": "test",
-///                "test2": 2
-///            }
-///        "#.into();
-///     let json_minified = minify(json);
-///     assert_eq!(&json_minified.to_string(), r#"{"test":"test","test2":2}"#);
-/// }
+/// let json = r#"
+///        {
+///            "test": "test",
+///            "test2": 2
+///        }
+///    "#.into();
+/// let json_minified = minify(json);
+/// assert_eq!(&json_minified.to_string(), r#"{"test":"test","test2":2}"#);
 /// ```
 #[inline]
-pub fn minify<'a>(json: &'a str) -> Minified<'a> {
+pub fn minify(json: &str) -> Minified<'_> {
     Minified(JsonMultiFilter::new(json.chars(), keep_element))
 }
 

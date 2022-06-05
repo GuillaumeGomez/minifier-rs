@@ -172,22 +172,20 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 /// ```rust
 /// use minifier::js::minify;
 ///
-/// fn main() {
-///     let js = r#"
-///         function forEach(data, func) {
-///            for (var i = 0; i < data.length; ++i) {
-///                func(data[i]);
-///            }
-///         }"#.into();
-///     let js_minified = minify(js);
-///     assert_eq!(
-///         &js_minified.to_string(),
-///         "function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i])}}",
-///     );
-/// }
+/// let js = r#"
+///     function forEach(data, func) {
+///        for (var i = 0; i < data.length; ++i) {
+///            func(data[i]);
+///        }
+///     }"#.into();
+/// let js_minified = minify(js);
+/// assert_eq!(
+///     &js_minified.to_string(),
+///     "function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i])}}",
+/// );
 /// ```
 #[inline]
-pub fn minify<'a>(source: &'a str) -> Minified<'a> {
+pub fn minify(source: &str) -> Minified<'_> {
     Minified(token::tokenize(source).apply(::js::clean_tokens))
 }
 

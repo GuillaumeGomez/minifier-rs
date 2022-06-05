@@ -11,14 +11,12 @@ mod token;
 /// ```rust
 /// use minifier::css::minify;
 ///
-/// fn main() {
-///     let css = r#"
-///         .foo > p {
-///             color: red;
-///         }"#.into();
-///     let css_minified = minify(css).expect("minification failed");
-///     assert_eq!(&css_minified.to_string(), ".foo>p{color:red;}");
-/// }
+/// let css = r#"
+///     .foo > p {
+///         color: red;
+///     }"#.into();
+/// let css_minified = minify(css).expect("minification failed");
+/// assert_eq!(&css_minified.to_string(), ".foo>p{color:red;}");
 /// ```
 pub fn minify<'a>(content: &'a str) -> Result<Minified<'a>, &'static str> {
     token::tokenize(content).map(Minified)

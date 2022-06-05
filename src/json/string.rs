@@ -72,8 +72,8 @@ where
         ) -> bool
         + Clone,
 {
-    pub(super) fn write<W: std::io::Write>(mut self, mut w: W) -> std::io::Result<()> {
-        while let Some(token) = self.next() {
+    pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
+        for token in self {
             write!(w, "{}", token)?;
         }
         Ok(())
@@ -90,8 +90,8 @@ where
         + Clone,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut s = (*self).clone();
-        while let Some(token) = s.next() {
+        let s = (*self).clone();
+        for token in s {
             write!(f, "{}", token)?;
         }
         Ok(())
