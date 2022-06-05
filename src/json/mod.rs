@@ -5,7 +5,8 @@ use json::{
     read::json_read::JsonRead,
     string::JsonMultiFilter,
 };
-use std::io::Read;
+use std::fmt;
+use std::io::{self, Read};
 
 mod read {
     mod byte_to_char;
@@ -35,11 +36,27 @@ type JsonMethod = fn(&mut JsonMinifier, &char, Option<&char>) -> bool;
 ///            }
 ///        "#.into();
 ///     let json_minified = minify(json);
+///     assert_eq!(&json_minified.to_string(), r#"{"test":"test","test2":2}"#);
 /// }
 /// ```
 #[inline]
-pub fn minify(json: &str) -> String {
-    JsonMultiFilter::new(json.chars(), keep_element).collect()
+pub fn minify<'a>(json: &'a str) -> Minified<'a> {
+    Minified(JsonMultiFilter::new(json.chars(), keep_element))
+}
+
+#[derive(Debug)]
+pub struct Minified<'a>(JsonMultiFilter<'a, JsonMethod>);
+
+impl<'a> Minified<'a> {
+    pub fn write<W: io::Write>(self, w: W) -> io::Result<()> {
+        self.0.write(w)
+    }
+}
+
+impl<'a> fmt::Display for Minified<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
 }
 
 /// Minifies a given Read by JSON minification rules
@@ -81,7 +98,7 @@ fn removal_of_control_characters() {
     let input = "\n".into();
     let expected: String = "".into();
     let actual = minify(input);
-    assert_eq!(actual, expected);
+    assert_eq!(actual.to_string(), expected);
 }
 
 #[test]
@@ -96,5 +113,5 @@ fn removal_of_whitespace_outside_of_tags() {
     .into();
     let expected: String = "{\"test\":\"\\\" test2\",\"test2\":\"\",\"test3\":\" \"}".into();
     let actual = minify(input);
-    assert_eq!(actual, expected);
+    assert_eq!(actual.to_string(), expected);
 }
