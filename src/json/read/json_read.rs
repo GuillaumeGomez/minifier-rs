@@ -59,7 +59,7 @@ impl<P, R: Read> JsonRead<P, R> {
 }
 
 impl<P, R: Read + fmt::Debug> fmt::Debug for JsonRead<P, R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Filter")
             .field("iter", &self.iter)
             .field("initialized", &self.initialized)

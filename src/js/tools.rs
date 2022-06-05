@@ -242,8 +242,8 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
     let mut to_replace: Vec<(usize, usize)> = Vec::new();
 
     for (var_name, positions) in {
-        let mut strs: HashMap<&Token, Vec<usize>> = HashMap::with_capacity(1000);
-        let mut validated: HashMap<&Token, String> = HashMap::with_capacity(100);
+        let mut strs: HashMap<&Token<'_>, Vec<usize>> = HashMap::with_capacity(1000);
+        let mut validated: HashMap<&Token<'_>, String> = HashMap::with_capacity(100);
 
         let mut var_gen = VariableNameGenerator::new(Some("r_"), 2);
         let mut next_name = var_gen.to_string();

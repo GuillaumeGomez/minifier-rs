@@ -46,7 +46,7 @@ impl ReservedChar {
 }
 
 impl fmt::Display for ReservedChar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -166,7 +166,7 @@ impl Keyword {
 }
 
 impl fmt::Display for Keyword {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -263,7 +263,7 @@ pub enum Condition {
 }
 
 impl fmt::Display for Condition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -325,7 +325,7 @@ impl Operation {
 }
 
 impl fmt::Display for Operation {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -384,7 +384,7 @@ pub enum Token<'a> {
 }
 
 impl<'a> fmt::Display for Token<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Token::Keyword(x) => write!(f, "{}", x),
             Token::Char(x) => write!(f, "{}", x),
@@ -564,7 +564,7 @@ fn get_regex<'a>(
     source: &'a str,
     iterator: &mut MyPeekable<'_>,
     start_pos: &mut usize,
-    v: &[Token],
+    v: &[Token<'_>],
 ) -> Option<Token<'a>> {
     let mut back = v.len();
     while back > 0 {
@@ -765,7 +765,7 @@ fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: us
     }
 }
 
-fn handle_equal_sign(v: &mut Vec<Token>, c: ReservedChar) -> bool {
+fn handle_equal_sign(v: &mut Vec<Token<'_>>, c: ReservedChar) -> bool {
     if c != ReservedChar::EqualSign {
         return false;
     }
@@ -822,7 +822,7 @@ fn handle_equal_sign(v: &mut Vec<Token>, c: ReservedChar) -> bool {
 }
 
 fn check_if_number<'a>(
-    iterator: &mut MyPeekable,
+    iterator: &mut MyPeekable<'_>,
     start: usize,
     pos: usize,
     source: &'a str,
