@@ -1014,18 +1014,9 @@ pub fn tokenize(source: &str) -> Tokens<'_> {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Tokens<'a>(pub Vec<Token<'a>>);
 
-impl<'a> Tokens<'a> {
-    pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
-        for token in self.0.iter() {
-            write!(w, "{}", token)?;
-        }
-        Ok(())
-    }
-}
-
-impl<'a> fmt::Display for Tokens<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let tokens = &self.0;
+macro_rules! tokens_writer {
+    ($self:ident, $w:ident) => {
+        let tokens = &$self.0;
         for i in 0..tokens.len() {
             if i > 0
                 && tokens[i].requires_before()
@@ -1034,18 +1025,31 @@ impl<'a> fmt::Display for Tokens<'a> {
                 && !tokens[i - 1].is_reserved_char()
                 && !tokens[i - 1].is_string()
             {
-                write!(f, " ")?;
+                write!($w, " ")?;
             }
-            write!(f, "{}", tokens[i])?;
+            write!($w, "{}", tokens[i])?;
             if let Some(c) = match tokens[i] {
                 Token::Keyword(_) | Token::Other(_) if i + 1 < tokens.len() => {
                     tokens[i + 1].get_required()
                 }
                 _ => None,
             } {
-                write!(f, "{}", c)?;
+                write!($w, "{}", c)?;
             }
         }
+    };
+}
+
+impl<'a> Tokens<'a> {
+    pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
+        tokens_writer!(self, w);
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for Tokens<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        tokens_writer!(self, f);
         Ok(())
     }
 }
