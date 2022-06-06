@@ -1035,24 +1035,46 @@ var valGenerics = extractGenerics(val);"#;
 
 #[test]
 fn keep_space() {
-    let source = "return 12;return x;";
+    fn inner_double_checks(source: &str, expected: &str) {
+        assert_eq!(minify(source).to_string(), expected);
+        let s = minify(source);
+        let mut out: Vec<u8> = Vec::new();
+        s.write(&mut out).unwrap();
+        assert_eq!(String::from_utf8(out).unwrap(), expected);
+    }
 
-    let expected_result = "return 12;return x";
-    assert_eq!(minify(source).to_string(), expected_result);
+    inner_double_checks("return 12;return x;", "return 12;return x");
+    inner_double_checks("t in e", "t in e");
+    inner_double_checks("t + 1 in e", "t+1 in e");
+    inner_double_checks("t - 1 in e", "t-1 in e");
+    inner_double_checks("'a' in e", "'a'in e");
+    inner_double_checks("/a/g in e", "/a/g in e");
+    inner_double_checks("/a/i in e", "/a/i in e");
 
-    assert_eq!("t in e", minify("t in e").to_string());
-    assert_eq!("t+1 in e", minify("t + 1 in e").to_string());
-    assert_eq!("t-1 in e", minify("t - 1 in e").to_string());
-    assert_eq!("'a'in e", minify("'a' in e").to_string());
-    assert_eq!("/a/g in e", minify("/a/g in e").to_string());
-    assert_eq!("/a/i in e", minify("/a/i in e").to_string());
+    inner_double_checks("t instanceof e", "t instanceof e");
+    inner_double_checks("t + 1 instanceof e", "t+1 instanceof e");
+    inner_double_checks("t - 1 instanceof e", "t-1 instanceof e");
+    inner_double_checks("'a' instanceof e", "'a'instanceof e");
+    inner_double_checks("/a/g instanceof e", "/a/g instanceof e");
+    inner_double_checks("/a/i instanceof e", "/a/i instanceof e");
 
-    assert_eq!("t instanceof e", minify("t instanceof e").to_string());
-    assert_eq!("t+1 instanceof e", minify("t + 1 instanceof e").to_string());
-    assert_eq!("t-1 instanceof e", minify("t - 1 instanceof e").to_string());
-    assert_eq!("'a'instanceof e", minify("'a' instanceof e").to_string());
-    assert_eq!("/a/g instanceof e", minify("/a/g instanceof e").to_string());
-    assert_eq!("/a/i instanceof e", minify("/a/i instanceof e").to_string());
+    inner_double_checks("function foo() { let x = 12; }", "function foo(){let x=12}");
+    inner_double_checks(
+        r#""use strict";
+
+(function() {
+    const itemTypes = [
+        "mod",
+        "externcrate",
+        "import",
+        "struct",
+    ];
+    const TY_PRIMITIVE = itemTypes;
+    function hasOwnPropertyRustdoc() {}
+})();"#,
+        "\"use strict\";(function(){const itemTypes=[\"mod\",\"externcrate\",\"import\",\"struct\"\
+         ,];const TY_PRIMITIVE=itemTypes;function hasOwnPropertyRustdoc(){}})()",
+    );
 }
 
 #[test]
