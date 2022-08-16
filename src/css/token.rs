@@ -571,9 +571,17 @@ pub(super) fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> 
 }
 
 fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
+    // This function may remove multiple elements from the vector. Ideally we'd
+    // use `Vec::retain`, but the traversal requires inspecting the previously
+    // retained token and the next token, which `Vec::retain` doesn't allow. So
+    // we have to use a lower-level mechanism.
     let mut i = 0;
+    // Index of the previous retained token, if there is one.
+    let mut ip: Option<usize> = None;
     let mut is_in_calc = false;
     let mut paren = 0;
+    // A vector of bools indicating which elements are to be retained.
+    let mut b = Vec::with_capacity(v.len());
 
     while i < v.len() {
         if v[i] == Token::Other("calc") {
@@ -587,39 +595,41 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
             }
         }
 
+        let mut retain = true;
         if v[i].is_useless() {
-            if i > 0 && v[i - 1] == Token::Char(ReservedChar::CloseBracket) {
+            if ip.is_some() && v[ip.unwrap()] == Token::Char(ReservedChar::CloseBracket) {
                 if i + 1 < v.len()
                     && (v[i + 1].is_useless()
                         || v[i + 1] == Token::Char(ReservedChar::OpenCurlyBrace))
                 {
-                    v.remove(i);
-                    continue;
+                    retain = false;
                 }
-            } else if i > 0
-                && (v[i - 1] == Token::Other("and")
-                    || v[i - 1] == Token::Other("or")
-                    || v[i - 1] == Token::Other("not"))
-            {
+            } else if ip.is_some() && matches!(v[ip.unwrap()], Token::Other("and" | "or" | "not")) {
                 // retain the space after "and", "or" or "not"
-            } else if (is_in_calc && v[i - 1].is_useless())
-                || !is_in_calc
-                    && ((i > 0
-                        && ((v[i - 1].is_char()
-                            && v[i - 1] != Token::Char(ReservedChar::CloseParenthese))
-                            || v[i - 1].is_a_media()
-                            || v[i - 1].is_a_license()))
-                        || (i < v.len() - 1 && v[i + 1].is_char()))
+            } else if is_in_calc && v[ip.unwrap()].is_useless() {
+                retain = false;
+            } else if !is_in_calc
+                && ((ip.is_some() && {
+                    let prev = &v[ip.unwrap()];
+                    (prev.is_char() && prev != &Token::Char(ReservedChar::CloseParenthese))
+                        || prev.is_a_media()
+                        || prev.is_a_license()
+                }) || (i < v.len() - 1 && v[i + 1].is_char()))
             {
-                v.remove(i);
-                continue;
+                retain = false;
             }
         } else if v[i].is_comment() {
-            v.remove(i);
-            continue;
+            retain = false;
         }
+        if retain {
+            ip = Some(i);
+        }
+        b.push(retain);
         i += 1;
     }
+    assert_eq!(v.len(), b.len());
+    let mut b = b.into_iter();
+    v.retain(|_| b.next().unwrap());
     v
 }
 
