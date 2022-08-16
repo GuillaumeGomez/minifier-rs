@@ -597,6 +597,7 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
 
         let mut retain = true;
         if v[i].is_useless() {
+            #[allow(clippy::if_same_then_else)]
             if ip.is_some() && v[ip.unwrap()] == Token::Char(ReservedChar::CloseBracket) {
                 if i + 1 < v.len()
                     && (v[i + 1].is_useless()
