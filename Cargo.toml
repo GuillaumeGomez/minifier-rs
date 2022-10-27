@@ -11,10 +11,6 @@ keywords = ["minify", "minifier", "JS", "HTML", "CSS"]
 license = "MIT"
 edition = "2021"
 
-[badges]
-appveyor = { repository = "GuillaumeGomez/minifier-rs", service = "github" }
-travis-ci = { repository = "GuillaumeGomez/minifier-rs" }
-
 [features]
 html = ["regex"]
 

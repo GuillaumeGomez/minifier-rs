@@ -16,13 +16,7 @@ To use the library, add it into your `Cargo.toml` file like this:
 
 ```toml
 [dependencies]
-minifier = "^0.0.1"
-```
-
-Then import it into your code like this:
-
-```rust
-extern crate minifier;
+minifier = "0.2"
 ```
 
 ## WARNING!!
