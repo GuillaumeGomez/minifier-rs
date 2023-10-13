@@ -579,6 +579,7 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
     // Index of the previous retained token, if there is one.
     let mut ip: Option<usize> = None;
     let mut is_in_calc = false;
+    let mut is_in_container = false;
     let mut paren = 0;
     // A vector of bools indicating which elements are to be retained.
     let mut b = Vec::with_capacity(v.len());
@@ -593,6 +594,9 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
             } else if v[i] == Token::Char(ReservedChar::OpenParenthese) {
                 paren += 1;
             }
+        }
+        if v[i] == Token::SelectorElement(SelectorElement::Media("container")) {
+            is_in_container = true;
         }
 
         let mut retain = true;
@@ -609,6 +613,8 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
                 // retain the space after "and", "or" or "not"
             } else if is_in_calc && v[ip.unwrap()].is_useless() {
                 retain = false;
+            } else if is_in_container && matches!(v[ip.unwrap()], Token::Other(_)) {
+                // retain spaces between keywords in container queryes
             } else if !is_in_calc
                 && ((ip.is_some() && {
                     let prev = &v[ip.unwrap()];
