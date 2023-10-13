@@ -427,7 +427,7 @@ fn fill_other<'a>(
 }
 
 #[allow(clippy::comparison_chain)]
-pub(super) fn tokenize<'a>(source: &'a str) -> Result<Tokens<'a>, &'static str> {
+pub(super) fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
     let mut v = Vec::with_capacity(1000);
     let mut iterator = source.char_indices().peekable();
     let mut start = 0;

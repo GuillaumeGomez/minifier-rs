@@ -18,7 +18,7 @@ mod token;
 /// let css_minified = minify(css).expect("minification failed");
 /// assert_eq!(&css_minified.to_string(), ".foo>p{color:red;}");
 /// ```
-pub fn minify<'a>(content: &'a str) -> Result<Minified<'a>, &'static str> {
+pub fn minify(content: &str) -> Result<Minified<'_>, &'static str> {
     token::tokenize(content).map(Minified)
 }
 
