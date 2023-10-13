@@ -200,6 +200,13 @@ fn check_calc() {
 }
 
 #[test]
+fn check_container() {
+    let s = "@container rustdoc (min-width: 1250px) { .foo { width: 100px; } }";
+    let expected = "@container rustdoc (min-width:1250px){.foo{width:100px;}}";
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
+}
+
+#[test]
 fn check_spaces() {
     let s = ".line-numbers .line-highlighted { color: #0a042f !important; }";
     let expected = ".line-numbers .line-highlighted{color:#0a042f !important;}";
