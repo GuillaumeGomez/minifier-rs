@@ -559,17 +559,17 @@ var n = null;
 "#;
     let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
 
-    let res: Tokens = crate::js::simple_minify(source)
-        .into_iter()
-        .filter(|(x, next)| crate::js::clean_token(x, next))
-        .map(|(t, _)| {
-            if t == Token::Keyword(Keyword::Null) {
+    let mut iter = crate::js::simple_minify(source).into_iter().peekable();
+    let mut tokens = Vec::new();
+    while let Some(token) = iter.next() {
+        if crate::js::clean_token(&token, &iter.peek()) {
+            tokens.push(if token == Token::Keyword(Keyword::Null) {
                 Token::Other("N")
             } else {
-                t
-            }
-        })
-        .collect::<Vec<_>>()
-        .into();
-    assert_eq!(res.to_string(), expected_result);
+                token
+            });
+        }
+    }
+    let tokens: Tokens = tokens.into();
+    assert_eq!(tokens.to_string(), expected_result);
 }
