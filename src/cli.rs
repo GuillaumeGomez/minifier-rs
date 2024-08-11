@@ -5,8 +5,7 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 use clap::builder::PossibleValue;
-use clap::{arg, command, value_parser, Arg, ArgAction, ValueEnum};
-use glob::glob;
+use clap::{command, value_parser, Arg, ArgAction, ValueEnum};
 
 extern crate minifier;
 use minifier::{css, js, json};
@@ -38,27 +37,21 @@ type will detect via extension of input file.
                     .value_parser(value_parser!(PathBuf)),
             )
             .arg(
-                arg!(<FILE>)
+                Arg::new("FILE")
                     .help("Input Files...")
                     .num_args(1..)
-                    .value_parser(value_parser!(String))
+                    .value_parser(value_parser!(PathBuf))
                     .action(ArgAction::Append),
             )
             .get_matches();
-        let args: Vec<&str> = matches
-            .get_many::<String>("FILE")
+        let args: Vec<&PathBuf> = matches
+            .get_many::<PathBuf>("FILE")
             .unwrap_or_default()
-            .map(|v| v.as_str())
             .collect::<Vec<_>>();
         let ext: Option<&FileType> = matches.get_one::<FileType>("FileType");
         let out: Option<&PathBuf> = matches.get_one::<PathBuf>("output");
-        for i in args {
-            for entry in glob(i).expect("Failed to read glob pattern") {
-                match entry {
-                    Ok(path) => write_out_file(&path, out, ext),
-                    Err(e) => println!("{:?}", e),
-                }
-            }
+        for path in args.into_iter() {
+            write_out_file(path, out, ext);
         }
     }
 }
