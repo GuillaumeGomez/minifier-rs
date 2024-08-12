@@ -15,6 +15,7 @@ edition = "2021"
 html = ["regex"]
 
 [dependencies]
+clap = { version = "4.5.13", features = ["cargo"] }
 regex = { version = "1.5.5", optional = true }
 
 [lib]

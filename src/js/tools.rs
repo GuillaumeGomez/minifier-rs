@@ -265,7 +265,7 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
                 }
                 let x = strs.entry(token).or_insert_with(|| Vec::with_capacity(1));
                 x.push(pos);
-                if x.len() > 1 && validated.get(token).is_none() {
+                if x.len() > 1 && !validated.contains_key(token) {
                     let len = str_token.len();
                     // Computation here is simple, we declare new variables when creating this so
                     // the total of characters must be shorter than:
