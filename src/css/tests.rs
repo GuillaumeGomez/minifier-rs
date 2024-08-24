@@ -285,6 +285,16 @@ fn check_slash_slash() {
 }
 
 #[test]
+fn check_escaped_characters() {
+    let s = r#".before\:prose-headings\:content-\[\'\#\'\] :is(:where(h1,h2,h3,h4,h5,h6,th):not(:where([class~="not-prose"] *)))::before{
+  --en-content: '#';
+  content: var(--en-content);
+}"#;
+    let expected = r#".before\:prose-headings\:content-\[\'\#\'\] :is(:where(h1,h2,h3,h4,h5,h6,th):not(:where([class~="not-prose"] *)))::before{--en-content:'#';content:var(--en-content);}"#;
+    assert_eq!(minify(s).expect("minify failed").to_string(), expected);
+}
+
+#[test]
 fn issue_80() {
     assert_eq!(
         minify("@import 'i';t{x: #fff;}").unwrap().to_string(),

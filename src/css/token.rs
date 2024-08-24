@@ -30,6 +30,7 @@ pub enum ReservedChar {
     Tilde,
     Dollar,
     Circumflex,
+    Backslash,
 }
 
 impl fmt::Display for ReservedChar {
@@ -61,6 +62,7 @@ impl fmt::Display for ReservedChar {
                 ReservedChar::Tilde => '~',
                 ReservedChar::Dollar => '$',
                 ReservedChar::Circumflex => '^',
+                ReservedChar::Backslash => '\\',
             }
         )
     }
@@ -94,6 +96,7 @@ impl TryFrom<char> for ReservedChar {
             '~' => Ok(ReservedChar::Tilde),
             '$' => Ok(ReservedChar::Dollar),
             '^' => Ok(ReservedChar::Circumflex),
+            '\\' => Ok(ReservedChar::Backslash),
             _ => Err("Unknown reserved char"),
         }
     }
@@ -465,7 +468,16 @@ pub(super) fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
                 || v.last()
                     .unwrap_or(&Token::Char(ReservedChar::Space))
                     .is_a_media();
+
             match c {
+                ReservedChar::Backslash => {
+                    v.push(Token::Char(ReservedChar::Backslash));
+
+                    if iterator.next().is_some() {
+                        pos += 1;
+                        v.push(Token::Other(&source[pos..pos + 1]));
+                    }
+                }
                 ReservedChar::Quote | ReservedChar::DoubleQuote => {
                     if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
                         v.push(s);
