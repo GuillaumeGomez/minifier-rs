@@ -44,13 +44,13 @@ pub fn minify(json: &str) -> Minified<'_> {
 #[derive(Debug)]
 pub struct Minified<'a>(JsonMultiFilter<'a, JsonMethod>);
 
-impl<'a> Minified<'a> {
+impl Minified<'_> {
     pub fn write<W: io::Write>(self, w: W) -> io::Result<()> {
         self.0.write(w)
     }
 }
 
-impl<'a> fmt::Display for Minified<'a> {
+impl fmt::Display for Minified<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
@@ -92,7 +92,7 @@ fn removal_from_read() {
 
 #[test]
 fn removal_of_control_characters() {
-    let input = "\n".into();
+    let input = "\n";
     let expected: String = "".into();
     let actual = minify(input);
     assert_eq!(actual.to_string(), expected);
@@ -106,8 +106,7 @@ fn removal_of_whitespace_outside_of_tags() {
               "test2": "",
               "test3": " "
             }
-        "#
-    .into();
+        "#;
     let expected: String = "{\"test\":\"\\\" test2\",\"test2\":\"\",\"test3\":\" \"}".into();
     let actual = minify(input);
     assert_eq!(actual.to_string(), expected);

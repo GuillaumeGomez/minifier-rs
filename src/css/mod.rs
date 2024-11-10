@@ -24,13 +24,13 @@ pub fn minify(content: &str) -> Result<Minified<'_>, &'static str> {
 
 pub struct Minified<'a>(token::Tokens<'a>);
 
-impl<'a> Minified<'a> {
+impl Minified<'_> {
     pub fn write<W: io::Write>(self, w: W) -> io::Result<()> {
         self.0.write(w)
     }
 }
 
-impl<'a> fmt::Display for Minified<'a> {
+impl fmt::Display for Minified<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }

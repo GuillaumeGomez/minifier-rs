@@ -191,13 +191,13 @@ pub fn minify(source: &str) -> Minified<'_> {
 
 pub struct Minified<'a>(token::Tokens<'a>);
 
-impl<'a> Minified<'a> {
+impl Minified<'_> {
     pub fn write<W: io::Write>(self, w: W) -> io::Result<()> {
         self.0.write(w)
     }
 }
 
-impl<'a> fmt::Display for Minified<'a> {
+impl fmt::Display for Minified<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
@@ -894,7 +894,7 @@ fn clean_except3() {
 
 #[test]
 fn name_generator() {
-    let s = std::iter::repeat('a').take(36).collect::<String>();
+    let s = "a".repeat(36);
     // We need to generate enough long strings to reach the point that the name generator
     // generates names with 3 characters.
     let s = std::iter::repeat(s)
@@ -913,7 +913,7 @@ fn name_generator() {
         .apply(crate::js::clean_tokens)
         .apply(aggregate_strings)
         .to_string();
-    assert!(result.find(",r_aaa=").is_some());
+    assert!(result.contains(",r_aaa="));
     assert!(result.find(",r_ab=").unwrap() < result.find(",r_ba=").unwrap());
 }
 

@@ -27,7 +27,7 @@ impl<'a, P: Clone> JsonMultiFilter<'a, P> {
     }
 }
 
-impl<'a, P: Clone> fmt::Debug for JsonMultiFilter<'a, P> {
+impl<P: Clone> fmt::Debug for JsonMultiFilter<'_, P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Filter")
             .field("minifier", &self.minifier)

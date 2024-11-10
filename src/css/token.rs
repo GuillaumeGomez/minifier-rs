@@ -212,7 +212,7 @@ impl<'a> TryFrom<&'a str> for SelectorElement<'a> {
     }
 }
 
-impl<'a> fmt::Display for SelectorElement<'a> {
+impl fmt::Display for SelectorElement<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             SelectorElement::Class(c) => write!(f, ".{}", c),
@@ -264,7 +264,7 @@ pub enum Token<'a> {
     Operator(Operator),
 }
 
-impl<'a> fmt::Display for Token<'a> {
+impl fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             // Token::AtRule(at_rule) => write!(f, "{}", at_rule, content),
@@ -281,7 +281,7 @@ impl<'a> fmt::Display for Token<'a> {
     }
 }
 
-impl<'a> Token<'a> {
+impl Token<'_> {
     fn is_comment(&self) -> bool {
         matches!(*self, Token::Comment(_))
     }
@@ -321,7 +321,7 @@ impl<'a> Token<'a> {
     }
 }
 
-impl<'a> PartialEq<ReservedChar> for Token<'a> {
+impl PartialEq<ReservedChar> for Token<'_> {
     fn eq(&self, other: &ReservedChar) -> bool {
         match *self {
             Token::Char(c) => c == *other,
@@ -655,7 +655,7 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(super) struct Tokens<'a>(Vec<Token<'a>>);
 
-impl<'a> Tokens<'a> {
+impl Tokens<'_> {
     pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
         for token in self.0.iter() {
             write!(w, "{}", token)?;
@@ -664,7 +664,7 @@ impl<'a> Tokens<'a> {
     }
 }
 
-impl<'a> fmt::Display for Tokens<'a> {
+impl fmt::Display for Tokens<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for token in self.0.iter() {
             write!(f, "{}", token)?;
