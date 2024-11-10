@@ -179,7 +179,7 @@ pub enum SelectorElement<'a> {
 impl<'a> TryFrom<&'a str> for SelectorElement<'a> {
     type Error = &'static str;
 
-    fn try_from(value: &'a str) -> Result<SelectorElement<'_>, Self::Error> {
+    fn try_from(value: &'a str) -> Result<SelectorElement<'a>, Self::Error> {
         if let Some(value) = value.strip_prefix('.') {
             if value.is_empty() {
                 Err("cannot determine selector")
