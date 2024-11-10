@@ -207,7 +207,7 @@ impl fmt::Display for Keyword {
     }
 }
 
-impl<'a> TryFrom<&'a str> for Keyword {
+impl TryFrom<&str> for Keyword {
     type Error = &'static str;
 
     fn try_from(value: &str) -> Result<Keyword, Self::Error> {
@@ -383,7 +383,7 @@ pub enum Token<'a> {
     FloatingNumber(&'a str),
 }
 
-impl<'a> fmt::Display for Token<'a> {
+impl fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Token::Keyword(x) => write!(f, "{}", x),
@@ -414,7 +414,7 @@ impl<'a> fmt::Display for Token<'a> {
     }
 }
 
-impl<'a> Token<'a> {
+impl Token<'_> {
     pub fn is_comment(&self) -> bool {
         matches!(*self, Token::Comment(_))
     }
@@ -883,7 +883,7 @@ impl<'a> MyPeekable<'a> {
     }
 }
 
-impl<'a> Iterator for MyPeekable<'a> {
+impl Iterator for MyPeekable<'_> {
     type Item = (usize, char);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -1035,14 +1035,14 @@ macro_rules! tokens_writer {
     };
 }
 
-impl<'a> Tokens<'a> {
+impl Tokens<'_> {
     pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
         tokens_writer!(self, w);
         Ok(())
     }
 }
 
-impl<'a> fmt::Display for Tokens<'a> {
+impl fmt::Display for Tokens<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         tokens_writer!(self, f);
         Ok(())
