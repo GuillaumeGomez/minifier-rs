@@ -336,10 +336,11 @@ fn get_comment<'a>(
     start_pos: &mut usize,
 ) -> Option<Token<'a>> {
     let mut prev = ReservedChar::Quote;
-    *start_pos += 1;
+    // eat the forward slash
+    let mut content_start_pos = *start_pos + 1;
     let builder = if let Some((_, c)) = iterator.next() {
         if c == '!' || (c == '*' && iterator.peek().map(|(_, c)| c) != Some(&'/')) {
-            *start_pos += 1;
+            content_start_pos += 1;
             Token::License
         } else {
             if let Ok(c) = ReservedChar::try_from(c) {
@@ -354,7 +355,7 @@ fn get_comment<'a>(
     for (pos, c) in iterator {
         if let Ok(c) = ReservedChar::try_from(c) {
             if c == ReservedChar::Slash && prev == ReservedChar::Star {
-                let ret = Some(builder(&source[*start_pos..pos - 1]));
+                let ret = Some(builder(&source[content_start_pos..pos - 1]));
                 *start_pos = pos;
                 return ret;
             }
@@ -473,9 +474,9 @@ pub(super) fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
                 ReservedChar::Backslash => {
                     v.push(Token::Char(ReservedChar::Backslash));
 
-                    if iterator.next().is_some() {
-                        pos += 1;
-                        v.push(Token::Other(&source[pos..pos + 1]));
+                    if let Some((idx, c)) = iterator.next() {
+                        pos += c.len_utf8();
+                        v.push(Token::Other(&source[idx..idx + c.len_utf8()]));
                     }
                 }
                 ReservedChar::Quote | ReservedChar::DoubleQuote => {
