@@ -306,3 +306,11 @@ fn issue_80() {
 fn check_attribute() {
     assert_eq!(minify("x [y] {}").unwrap().to_string(), "x [y]{}",);
 }
+
+#[test]
+fn check_unicode_edge_cases() {
+    let edge_cases = [";-/**\u{651}p", "\\\u{59c}"];
+    for edge_case in edge_cases {
+        let _ = minify(edge_case);
+    }
+}
