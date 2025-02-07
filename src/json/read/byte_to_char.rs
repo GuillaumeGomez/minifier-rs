@@ -42,10 +42,7 @@ impl<R: Read> Iterator for ByteToChar<R> {
     fn next(&mut self) -> Option<Result<char, CharsError>> {
         let first_byte = match self.get_next() {
             Err(err) => return Some(Err(err)),
-            Ok(item) => match item {
-                Some(item) => item,
-                None => return None,
-            },
+            Ok(item) => item?,
         };
 
         let width = utf8_char_width(first_byte);

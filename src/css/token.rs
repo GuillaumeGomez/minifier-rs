@@ -631,7 +631,9 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
                     if ((prev.is_char() && prev != &Token::Char(ReservedChar::CloseParenthese))
                         || prev.is_a_media()
                         || prev.is_a_license())
-                        || (i < v.len() - 1 && v[i + 1].is_char() && v[i + 1] != Token::Char(ReservedChar::OpenBracket))
+                        || (i < v.len() - 1
+                            && v[i + 1].is_char()
+                            && v[i + 1] != Token::Char(ReservedChar::OpenBracket))
                     {
                         retain = false;
                     }
