@@ -480,11 +480,10 @@ pub(super) fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
                         return Err("Unclosed string");
                     }
                 }
-                ReservedChar::Star
-                    if *v.last().unwrap_or(&Token::Char(ReservedChar::Space))
-                        == ReservedChar::Slash =>
-                {
-                    v.pop();
+                ReservedChar::Slash if matches!(iterator.peek(), Some(&(_, '*'))) => {
+                    // This is a comment.
+                    let _ = iterator.next();
+                    pos += 1;
                     if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
                         v.push(s);
                     } else {
@@ -640,6 +639,15 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
             }
         } else if v[i].is_comment() {
             retain = false;
+        } else if let Some(previous_element_index) = previous_element_index {
+            if matches!(v[previous_element_index], Token::Char(ReservedChar::Slash))
+                && matches!(v[i], Token::Char(ReservedChar::Star))
+            {
+                // this looks like a comment, but it is not
+                // splice in a separator here
+                v[i - 1] = Token::Other(" ");
+                b[i - 1] = true;
+            }
         }
         if retain {
             previous_element_index = Some(i);

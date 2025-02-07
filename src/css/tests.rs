@@ -320,4 +320,5 @@ fn check_weird_input() {
     assert!(minify(r##""}"##).is_err());
     assert!(minify(r##"/*}"##).is_err());
     assert_eq!(minify(".").unwrap().to_string(), ".");
+    assert_eq!(minify("//**/*").unwrap().to_string(), "/ *");
 }
