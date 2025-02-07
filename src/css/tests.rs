@@ -304,5 +304,5 @@ fn issue_80() {
 
 #[test]
 fn check_attribute() {
-    assert_eq!(minify("x [y] {}").unwrap().to_string(), "x [y] {}",);
+    assert_eq!(minify("x [y] {}").unwrap().to_string(), "x [y]{}",);
 }
