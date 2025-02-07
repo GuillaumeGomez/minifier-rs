@@ -314,3 +314,10 @@ fn check_unicode_edge_cases() {
         let _ = minify(edge_case);
     }
 }
+
+#[test]
+fn check_weird_input() {
+    assert!(minify(r##""}"##).is_err());
+    assert!(minify(r##"/*}"##).is_err());
+    assert_eq!(minify(".").unwrap().to_string(), ".");
+}

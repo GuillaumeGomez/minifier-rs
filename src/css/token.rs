@@ -416,13 +416,7 @@ fn fill_other<'a>(
                 v.push(Token::SelectorElement(s));
             } else {
                 let s = &source[start..pos];
-                if !s.starts_with(':')
-                    && !s.starts_with('.')
-                    && !s.starts_with('#')
-                    && !s.starts_with('@')
-                {
-                    v.push(Token::Other(s));
-                }
+                v.push(Token::Other(s));
             }
         } else {
             v.push(Token::Other(&source[start..pos]));
@@ -482,6 +476,8 @@ pub(super) fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
                 ReservedChar::Quote | ReservedChar::DoubleQuote => {
                     if let Some(s) = get_string(source, &mut iterator, &mut pos, c) {
                         v.push(s);
+                    } else {
+                        return Err("Unclosed string");
                     }
                 }
                 ReservedChar::Star
@@ -491,6 +487,8 @@ pub(super) fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
                     v.pop();
                     if let Some(s) = get_comment(source, &mut iterator, &mut pos) {
                         v.push(s);
+                    } else {
+                        return Err("Unclosed comment");
                     }
                 }
                 ReservedChar::OpenBracket => {
