@@ -550,26 +550,21 @@ pub(super) fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
                     v.push(Token::Char(c));
                 }
                 c => {
-                    if !v
-                        .last()
-                        .unwrap_or(&Token::Char(ReservedChar::Space))
-                        .is_useless()
-                        && (!v
-                            .last()
-                            .unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
-                            .is_char()
-                            || v.last()
-                                .unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
-                                .is_operator()
-                            || v.last()
-                                .unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
-                                .get_char()
-                                == Some(ReservedChar::CloseParenthese)
-                            || v.last()
-                                .unwrap_or(&Token::Char(ReservedChar::OpenCurlyBrace))
-                                .get_char()
-                                == Some(ReservedChar::CloseBracket))
-                    {
+                    if match v.last() {
+                        Some(c) => {
+                            !c.is_useless()
+                                && (!c.is_char()
+                                    || c.is_operator()
+                                    || matches!(
+                                        c.get_char(),
+                                        Some(
+                                            ReservedChar::CloseParenthese
+                                                | ReservedChar::CloseBracket
+                                        )
+                                    ))
+                        }
+                        _ => false,
+                    } {
                         v.push(Token::Char(ReservedChar::Space));
                     } else if let Ok(op) = Operator::try_from(c) {
                         v.push(Token::Operator(op));
@@ -589,7 +584,7 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
     // we have to use a lower-level mechanism.
     let mut i = 0;
     // Index of the previous retained token, if there is one.
-    let mut ip: Option<usize> = None;
+    let mut previous_element_index: Option<usize> = None;
     let mut is_in_calc = false;
     let mut is_in_container = false;
     let mut paren = 0;
@@ -613,35 +608,42 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
 
         let mut retain = true;
         if v[i].is_useless() {
-            #[allow(clippy::if_same_then_else)]
-            if ip.is_some() && v[ip.unwrap()] == Token::Char(ReservedChar::CloseBracket) {
-                if i + 1 < v.len()
-                    && (v[i + 1].is_useless()
-                        || v[i + 1] == Token::Char(ReservedChar::OpenCurlyBrace))
-                {
+            if let Some(previous_element_index) = previous_element_index {
+                #[allow(clippy::if_same_then_else)]
+                if v[previous_element_index] == Token::Char(ReservedChar::CloseBracket) {
+                    if i + 1 < v.len()
+                        && (v[i + 1].is_useless()
+                            || v[i + 1] == Token::Char(ReservedChar::OpenCurlyBrace))
+                    {
+                        retain = false;
+                    }
+                } else if matches!(
+                    v[previous_element_index],
+                    Token::Other("and" | "or" | "not")
+                ) {
+                    // retain the space after "and", "or" or "not"
+                } else if is_in_calc && v[previous_element_index].is_useless() {
                     retain = false;
-                }
-            } else if ip.is_some() && matches!(v[ip.unwrap()], Token::Other("and" | "or" | "not")) {
-                // retain the space after "and", "or" or "not"
-            } else if is_in_calc && v[ip.unwrap()].is_useless() {
-                retain = false;
-            } else if is_in_container && matches!(v[ip.unwrap()], Token::Other(_)) {
-                // retain spaces between keywords in container queryes
-            } else if !is_in_calc
-                && ((ip.is_some() && {
-                    let prev = &v[ip.unwrap()];
-                    (prev.is_char() && prev != &Token::Char(ReservedChar::CloseParenthese))
+                } else if is_in_container && matches!(v[previous_element_index], Token::Other(_)) {
+                    // retain spaces between keywords in container queries
+                } else if !is_in_calc {
+                    let prev = &v[previous_element_index];
+                    if ((prev.is_char() && prev != &Token::Char(ReservedChar::CloseParenthese))
                         || prev.is_a_media()
-                        || prev.is_a_license()
-                }) || (i < v.len() - 1 && v[i + 1].is_char()))
-            {
-                retain = false;
+                        || prev.is_a_license())
+                        || (i < v.len() - 1
+                            && v[i + 1].is_char()
+                            && v[i + 1] != Token::Char(ReservedChar::OpenBracket))
+                    {
+                        retain = false;
+                    }
+                }
             }
         } else if v[i].is_comment() {
             retain = false;
         }
         if retain {
-            ip = Some(i);
+            previous_element_index = Some(i);
         }
         b.push(retain);
         i += 1;
@@ -899,6 +901,20 @@ fn check_calc() {
         Token::Char(ReservedChar::CloseParenthese),
         Token::Char(ReservedChar::SemiColon),
         Token::Char(ReservedChar::CloseCurlyBrace),
+    ];
+    assert_eq!(tokenize(s), Ok(Tokens(expected)));
+}
+
+#[test]
+fn check_attr_ast() {
+    let s = "x [y]";
+
+    let expected = vec![
+        Token::SelectorElement(SelectorElement::Tag("x")),
+        Token::Char(ReservedChar::Space),
+        Token::Char(ReservedChar::OpenBracket),
+        Token::Other("y"),
+        Token::Char(ReservedChar::CloseBracket),
     ];
     assert_eq!(tokenize(s), Ok(Tokens(expected)));
 }

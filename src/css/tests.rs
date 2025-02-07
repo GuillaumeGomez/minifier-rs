@@ -301,3 +301,8 @@ fn issue_80() {
         "@import 'i';t{x:#fff;}",
     );
 }
+
+#[test]
+fn check_attribute() {
+    assert_eq!(minify("x [y] {}").unwrap().to_string(), "x [y]{}",);
+}
