@@ -1,0 +1,22 @@
+[package]
+name = "minifier-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+cssparser = "0.34.0"
+
+[dependencies.minifier]
+path = ".."
+
+[[bin]]
+name = "cssparser"
+path = "fuzz_targets/cssparser.rs"
+test = false
+doc = false
+bench = false
