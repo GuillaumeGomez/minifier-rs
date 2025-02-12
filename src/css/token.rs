@@ -584,7 +584,6 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
     // Index of the previous retained token, if there is one.
     let mut previous_element_index: Option<usize> = None;
     let mut is_in_calc = false;
-    let mut is_in_container = false;
     let mut paren = 0;
     // A vector of bools indicating which elements are to be retained.
     let mut b = Vec::with_capacity(v.len());
@@ -600,12 +599,9 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
                 paren += 1;
             }
         }
-        if v[i] == Token::SelectorElement(SelectorElement::Media("container")) {
-            is_in_container = true;
-        }
 
         let mut retain = true;
-        if v[i].is_useless() {
+        if v[i].is_useless() || v[i].is_comment() {
             if let Some(previous_element_index) = previous_element_index {
                 #[allow(clippy::if_same_then_else)]
                 if v[previous_element_index] == Token::Char(ReservedChar::CloseBracket) {
@@ -615,15 +611,32 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
                     {
                         retain = false;
                     }
+                } else if matches!(v[previous_element_index], Token::Other(_))
+                    && matches!(
+                        v.get(i + 1),
+                        Some(Token::Other(_) | Token::Char(ReservedChar::OpenParenthese))
+                    )
+                {
+                    // retain the space between keywords
+                    // and the space that disambiguates functions from keyword-plus-parens
                 } else if matches!(
                     v[previous_element_index],
-                    Token::Other("and" | "or" | "not")
-                ) {
-                    // retain the space after "and", "or" or "not"
+                    Token::Char(
+                        ReservedChar::Star
+                            | ReservedChar::Circumflex
+                            | ReservedChar::Dollar
+                            | ReservedChar::Tilde
+                    )
+                ) && matches!(v.get(i + 1), Some(Token::Char(ReservedChar::EqualSign)))
+                {
+                    // retain the space between an operator and an equal sign
+                } else if matches!(v[previous_element_index], Token::Char(ReservedChar::Slash))
+                    && matches!(v.get(i + 1), Some(Token::Char(ReservedChar::Star)))
+                {
+                    // this looks like a comment, but it is not
+                    // retain the space between `/` and `*`
                 } else if is_in_calc && v[previous_element_index].is_useless() {
                     retain = false;
-                } else if is_in_container && matches!(v[previous_element_index], Token::Other(_)) {
-                    // retain spaces between keywords in container queries
                 } else if !is_in_calc {
                     let prev = &v[previous_element_index];
                     if ((prev.is_char() && prev != &Token::Char(ReservedChar::CloseParenthese))
@@ -637,16 +650,9 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
                     }
                 }
             }
-        } else if v[i].is_comment() {
-            retain = false;
-        } else if let Some(previous_element_index) = previous_element_index {
-            if matches!(v[previous_element_index], Token::Char(ReservedChar::Slash))
-                && matches!(v[i], Token::Char(ReservedChar::Star))
-            {
-                // this looks like a comment, but it is not
-                // splice in a separator here
-                v[i - 1] = Token::Other(" ");
-                b[i - 1] = true;
+            if retain && v[i].is_comment() {
+                // convert comments to spaces when minifying
+                v[i] = Token::Char(ReservedChar::Space);
             }
         }
         if retain {
