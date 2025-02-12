@@ -619,6 +619,17 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
                 {
                     // retain the space between keywords
                     // and the space that disambiguates functions from keyword-plus-parens
+                } else if matches!(
+                    v[previous_element_index],
+                    Token::Char(
+                        ReservedChar::Star
+                            | ReservedChar::Circumflex
+                            | ReservedChar::Dollar
+                            | ReservedChar::Tilde
+                    )
+                ) && matches!(v.get(i + 1), Some(Token::Char(ReservedChar::EqualSign)))
+                {
+                    // retain the space between an operator and an equal sign
                 } else if matches!(v[previous_element_index], Token::Char(ReservedChar::Slash))
                     && matches!(v.get(i + 1), Some(Token::Char(ReservedChar::Star)))
                 {
@@ -641,7 +652,7 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
             }
             if retain && v[i].is_comment() {
                 // convert comments to spaces when minifying
-                v[i] = Token::Other(" ");
+                v[i] = Token::Char(ReservedChar::Space);
             }
         }
         if retain {
