@@ -321,4 +321,6 @@ fn check_weird_input() {
     assert!(minify(r##"/*}"##).is_err());
     assert_eq!(minify(".").unwrap().to_string(), ".");
     assert_eq!(minify("//**/*").unwrap().to_string(), "/ *");
+    assert_eq!(minify("1/**/H").unwrap().to_string(), "1 H");
+    assert_eq!(minify(r#"\-1"#).unwrap().to_string(), r#"\-1"#);
 }
