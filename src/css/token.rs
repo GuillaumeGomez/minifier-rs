@@ -308,6 +308,10 @@ impl Token<'_> {
         matches!(*self, Token::SelectorElement(SelectorElement::Media(_)))
     }
 
+    fn is_a_selector_element(&self) -> bool {
+        matches!(*self, Token::SelectorElement(_))
+    }
+
     fn is_a_license(&self) -> bool {
         matches!(*self, Token::License(_))
     }
@@ -619,6 +623,15 @@ fn clean_tokens(mut v: Vec<Token<'_>>) -> Vec<Token<'_>> {
                 {
                     // retain the space between keywords
                     // and the space that disambiguates functions from keyword-plus-parens
+                } else if v[previous_element_index].is_a_selector_element()
+                    && matches!(v.get(i + 1), Some(Token::Char(ReservedChar::Star)))
+                {
+                    // retain the space before `*` if it's preceded by a selector.
+                } else if matches!(v[previous_element_index], Token::Char(ReservedChar::Star))
+                    && v.get(i + 1)
+                        .is_some_and(|elem| elem.is_a_selector_element())
+                {
+                    // retain the space after `*` if it's followed by a selector.
                 } else if matches!(
                     v[previous_element_index],
                     Token::Char(
