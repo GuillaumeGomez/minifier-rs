@@ -325,3 +325,12 @@ fn check_weird_input() {
     assert_eq!(minify("*/**/=").unwrap().to_string(), "* =");
     assert_eq!(minify(r#"\-1"#).unwrap().to_string(), r#"\-1"#);
 }
+
+#[test]
+fn check_space_after_star() {
+    assert_eq!(minify("* .original").unwrap().to_string(), "* .original");
+    assert_eq!(
+        minify(".a * .original").unwrap().to_string(),
+        ".a * .original"
+    );
+}
