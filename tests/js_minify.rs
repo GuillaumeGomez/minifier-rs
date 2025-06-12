@@ -33,7 +33,7 @@ fn compare_strs(minified: &str, str2: &str) {
                         &minified[get_ranges(pos, minified)],
                         &str2[get_ranges(pos, str2)]
                     );
-                    panic!("Chars differ");
+                    panic!("Chars differ. Complete minified content:\n{minified}");
                 }
             }
             (None, Some((pos, _))) => {

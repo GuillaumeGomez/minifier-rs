@@ -181,7 +181,7 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 /// let js_minified = minify(js);
 /// assert_eq!(
 ///     &js_minified.to_string(),
-///     "function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i])}}",
+///     "function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i]);}}",
 /// );
 /// ```
 #[inline]
@@ -287,7 +287,6 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
         let mut ret = Vec::with_capacity(validated.len());
 
         // We need this macro to avoid having to sort the set when not testing the crate.
-        //#[cfg(test)]
         macro_rules! inner_loop {
             ($x:ident) => {{
                 let mut $x = $x.into_iter().collect::<Vec<_>>();
@@ -295,12 +294,6 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
                 $x
             }};
         }
-        /*#[cfg(not(test))]
-        macro_rules! inner_loop {
-            ($x:ident) => {
-                $x.into_iter()
-            }
-        }*/
 
         for (token, var_name) in inner_loop!(validated) {
             ret.push((var_name, strs.remove(&token).unwrap()));
@@ -644,7 +637,7 @@ fn aggregate_strings_in_array() {
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
-                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
@@ -655,7 +648,7 @@ fn aggregate_strings_in_array() {
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var R=[\"a nice string\",\"cake!\"];\nvar x=[R[0],R[0],\
-                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
@@ -672,7 +665,7 @@ fn aggregate_strings_in_array() {
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "another nice string", "another nice string", "another nice string","cake!","cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var R=[\"a nice string\",\"another nice string\",\"cake!\"];\n\
                            var x=[R[0],R[0],R[1],R[1],R[1],R[1],R[2],R[2],R[0],R[2],\
-                           R[2],R[2]]";
+                           R[2],R[2]];";
 
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
@@ -690,7 +683,7 @@ fn aggregate_strings_in_array() {
 #[test]
 fn aggregate_strings_in_array_filter() {
     let source = r#"var searchIndex = {};searchIndex['duplicate_paths'] = {'aaaaaaaa': 'bbbbbbbb', 'bbbbbbbb': 'aaaaaaaa', 'duplicate_paths': 'aaaaaaaa'};"#;
-    let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],'duplicate_paths':R[1]}";
+    let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],'duplicate_paths':R[1]};";
 
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
@@ -710,7 +703,7 @@ fn aggregate_strings_in_array_filter() {
     assert_eq!(result, expected_result);
 
     let source = r#"var searchIndex = {};searchIndex['duplicate_paths'] = {'aaaaaaaa': 'bbbbbbbb', 'bbbbbbbb': 'aaaaaaaa', 'duplicate_paths': 'aaaaaaaa', 'x': 'duplicate_paths'};"#;
-    let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\",\"duplicate_paths\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],R[2]:R[1],'x':R[2]}";
+    let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\",\"duplicate_paths\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],R[2]:R[1],'x':R[2]};";
 
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
@@ -735,7 +728,7 @@ fn aggregate_strings_in_array_existing() {
     let source = r#"var R=[];var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
-                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
@@ -746,7 +739,7 @@ fn aggregate_strings_in_array_existing() {
     let source = r#"var R=["a nice string"];var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
-                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
@@ -757,7 +750,7 @@ fn aggregate_strings_in_array_existing() {
     let source = r#"var y = 12;var R=["a nice string"];var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var y=12;var R=[\"a nice string\",\"cake!\"];var x=[R[0],R[0],\
-                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]]";
+                           \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
@@ -769,7 +762,7 @@ fn aggregate_strings_in_array_existing() {
                     var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var R=[\"osef1\",\"o2\",\"damn\",\"a nice string\",\"cake!\"];\
-                           var x=[R[3],R[3],\"another nice string\",R[4],R[4],R[3],R[4],R[4],R[4]]";
+                           var x=[R[3],R[3],\"another nice string\",R[4],R[4],R[3],R[4],R[4],R[4]];";
 
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
@@ -783,7 +776,7 @@ fn string_duplicates() {
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var r_aa=\"a nice string\",r_ba=\"cake!\";var x=[r_aa,r_aa,\
-                           \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba]";
+                           \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
 
     let result = simple_minify(source)
         .apply(aggregate_strings)
@@ -798,7 +791,7 @@ fn already_existing_var() {
                     "another nice string", "cake!",
                     "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var r_ba=\"cake!\";var r_aa=\"a nice string\";var x=[r_aa,r_aa,\
-                           \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba]";
+                           \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
 
     let result = simple_minify(source)
         .apply(aggregate_strings)
@@ -813,7 +806,7 @@ fn string_duplicates_variables_already_exist() {
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var r_ba=\"a nice string\",r_ca=\"cake!\";\
                            var r_aa=1;var x=[r_ba,r_ba,\
-                           \"another nice string\",r_ca,r_ca,r_ba,r_ca,r_ca,r_ca]";
+                           \"another nice string\",r_ca,r_ca,r_ba,r_ca,r_ca,r_ca];";
 
     let result = simple_minify(source)
         .apply(aggregate_strings)
@@ -829,7 +822,7 @@ fn string_duplicates_with_separator() {
     let source = r#"var x = ["a nice string", "a nice string", "another nice string", "cake!",
                              "cake!", "a nice string", "cake!", "cake!", "cake!"];"#;
     let expected_result = "var r_aa=\"a nice string\",r_ba=\"cake!\";\nvar x=[r_aa,r_aa,\
-                           \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba]";
+                           \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
     let result = simple_minify(source)
         .apply(crate::js::clean_tokens)
         .apply(|f| aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline)))
@@ -920,7 +913,7 @@ fn name_generator() {
 #[test]
 fn simple_quote() {
     let source = r#"var x = "\\";"#;
-    let expected_result = r#"var x="\\""#;
+    let expected_result = r#"var x="\\";"#;
     assert_eq!(minify(source).to_string(), expected_result);
 }
 
@@ -955,8 +948,7 @@ far_away(another_var, 12);
 "##;
 
     let expected_result = "var foo=\"something\";var another_var=2348323;function far_away(x,y){\
-                           var x2=x+4;return x*x2+y}far_away(another_var,12);far_away(another_var,\
-                           12)";
+var x2=x+4;return x*x2+y;}far_away(another_var,12);far_away(another_var,12);";
     assert_eq!(minify(source).to_string(), expected_result);
 }
 
@@ -989,7 +981,7 @@ console.log('done!');
  * because everyone likes licenses!
  *
  * right?
- */function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i])}}forEach([0,1,2,3,4,5,6,7,8,9],function(x){console.log(x)});console.log('done!')"#;
+ */function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i]);}}forEach([0,1,2,3,4,5,6,7,8,9],function(x){console.log(x);});console.log('done!');"#;
     assert_eq!(minify(source).to_string(), expected_result);
 }
 
@@ -1006,7 +998,7 @@ search_input.onchange = function(e) {
 };
 "#;
     let expected_result = "search_input.onchange=function(e){clearTimeout(searchTimeout);\
-                           setTimeout(search,0)}";
+                           setTimeout(search,0);};";
     assert_eq!(minify(source).to_string(), expected_result);
 }
 
@@ -1019,7 +1011,7 @@ for (var entry in results) {
     }
 }"#;
     let expected_result = "for(var entry in results){if(results.hasOwnProperty(entry)){\
-                           ar.push(results[entry])}}";
+                           ar.push(results[entry]);}}";
     assert_eq!(minify(source).to_string(), expected_result);
 }
 
@@ -1029,7 +1021,7 @@ fn weird_regex_issue() {
 val = val.replace(/\_/g, "");
 
 var valGenerics = extractGenerics(val);"#;
-    let expected_result = "val=val.replace(/\\_/g,\"\");var valGenerics=extractGenerics(val)";
+    let expected_result = "val=val.replace(/\\_/g,\"\");var valGenerics=extractGenerics(val);";
     assert_eq!(minify(source).to_string(), expected_result);
 }
 
@@ -1043,7 +1035,7 @@ fn keep_space() {
         assert_eq!(String::from_utf8(out).unwrap(), expected);
     }
 
-    inner_double_checks("return 12;return x;", "return 12;return x");
+    inner_double_checks("return 12;return x;", "return 12;return x;");
     inner_double_checks("t in e", "t in e");
     inner_double_checks("t + 1 in e", "t+1 in e");
     inner_double_checks("t - 1 in e", "t-1 in e");
@@ -1058,7 +1050,10 @@ fn keep_space() {
     inner_double_checks("/a/g instanceof e", "/a/g instanceof e");
     inner_double_checks("/a/i instanceof e", "/a/i instanceof e");
 
-    inner_double_checks("function foo() { let x = 12; }", "function foo(){let x=12}");
+    inner_double_checks(
+        "function foo() { let x = 12; }",
+        "function foo(){let x=12;}",
+    );
     inner_double_checks(
         r#""use strict";
 
@@ -1073,7 +1068,7 @@ fn keep_space() {
     function hasOwnPropertyRustdoc() {}
 })();"#,
         "\"use strict\";(function(){const itemTypes=[\"mod\",\"externcrate\",\"import\",\"struct\"\
-         ,];const TY_PRIMITIVE=itemTypes;function hasOwnPropertyRustdoc(){}})()",
+         ,];const TY_PRIMITIVE=itemTypes;function hasOwnPropertyRustdoc(){}})();",
     );
 }
 
@@ -1091,7 +1086,7 @@ fn test_remove_extra_whitespace_before_in() {
 if (x in ev && typeof ev) { return true; }
 if (true in ev) { return true; }"#;
 
-    let expected_result = r#"if("key"in ev&&typeof ev){return true}if(x in ev&&typeof ev){return true}if(true in ev){return true}"#;
+    let expected_result = r#"if("key"in ev&&typeof ev){return true;}if(x in ev&&typeof ev){return true;}if(true in ev){return true;}"#;
     assert_eq!(minify(source).to_string(), expected_result);
 }
 
@@ -1106,7 +1101,7 @@ fn test_remove_extra_whitespace_before_operator() {
 #[test]
 fn check_regex_syntax() {
     let source = "console.log(/MSIE|Trident|Edge/.test(window.navigator.userAgent));";
-    let expected = "console.log(/MSIE|Trident|Edge/.test(window.navigator.userAgent))";
+    let expected = "console.log(/MSIE|Trident|Edge/.test(window.navigator.userAgent));";
     assert_eq!(minify(source).to_string(), expected);
 }
 
@@ -1126,7 +1121,41 @@ fn check_string() {
         const d = `      ${a}         ${b}      `;
     "###;
     let expected = "const a=123;const b=\"123\";const c=`the number is ${a}  <-- note the spaces \
-    here`;const d=`      ${a}         ${b}      `";
+    here`;const d=`      ${a}         ${b}      `;";
+    assert_eq!(minify(source).to_string(), expected);
+}
+
+// `for` and `while` loops can be followed with a `;` instead of a block.
+#[test]
+fn test_loops() {
+    let source = "for (; b() ;);";
+    let expected = "for(;b(););";
+    assert_eq!(minify(source).to_string(), expected);
+
+    let source = "while (b());";
+    let expected = "while(b());";
+    assert_eq!(minify(source).to_string(), expected);
+
+    let source = r#"
+function a() {
+    for (; b() ;);
+    while (b());
+}"#;
+    let expected = "function a(){for(;b(););while(b());}";
+    assert_eq!(minify(source).to_string(), expected);
+
+    let source = r#"
+function a() {
+    for (; b() ;);
+}"#;
+    let expected = "function a(){for(;b(););}";
+    assert_eq!(minify(source).to_string(), expected);
+
+    let source = r#"
+function a() {
+    while (b());
+}"#;
+    let expected = "function a(){while(b());}";
     assert_eq!(minify(source).to_string(), expected);
 }
 
