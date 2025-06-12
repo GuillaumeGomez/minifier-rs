@@ -386,16 +386,16 @@ pub enum Token<'a> {
 impl fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Token::Keyword(x) => write!(f, "{}", x),
-            Token::Char(x) => write!(f, "{}", x),
-            Token::String(x) | Token::Comment(x) | Token::Other(x) => write!(f, "{}", x),
-            Token::License(x) => write!(f, "/*!{}*/", x),
+            Token::Keyword(x) => write!(f, "{x}"),
+            Token::Char(x) => write!(f, "{x}"),
+            Token::String(x) | Token::Comment(x) | Token::Other(x) => write!(f, "{x}"),
+            Token::License(x) => write!(f, "/*!{x}*/"),
             Token::Regex {
                 regex,
                 is_global,
                 is_interactive,
             } => {
-                let x = write!(f, "/{}/", regex);
+                let x = write!(f, "/{regex}/");
                 if is_global {
                     write!(f, "g")?;
                 }
@@ -404,12 +404,12 @@ impl fmt::Display for Token<'_> {
                 }
                 x
             }
-            Token::Condition(x) => write!(f, "{}", x),
-            Token::Operation(x) => write!(f, "{}", x),
-            Token::CreatedVarDecl(ref x) => write!(f, "{}", x),
-            Token::CreatedVar(ref x) => write!(f, "{}", x),
-            Token::Number(x) => write!(f, "{}", x),
-            Token::FloatingNumber(ref x) => write!(f, "{}", x),
+            Token::Condition(x) => write!(f, "{x}"),
+            Token::Operation(x) => write!(f, "{x}"),
+            Token::CreatedVarDecl(ref x) => write!(f, "{x}"),
+            Token::CreatedVar(ref x) => write!(f, "{x}"),
+            Token::Number(x) => write!(f, "{x}"),
+            Token::FloatingNumber(ref x) => write!(f, "{x}"),
         }
     }
 }

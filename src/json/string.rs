@@ -75,7 +75,7 @@ where
 {
     pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
         for token in self {
-            write!(w, "{}", token)?;
+            write!(w, "{token}")?;
         }
         Ok(())
     }
@@ -93,7 +93,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = (*self).clone();
         for token in s {
-            write!(f, "{}", token)?;
+            write!(f, "{token}")?;
         }
         Ok(())
     }

@@ -215,11 +215,11 @@ impl<'a> TryFrom<&'a str> for SelectorElement<'a> {
 impl fmt::Display for SelectorElement<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            SelectorElement::Class(c) => write!(f, ".{}", c),
-            SelectorElement::Id(i) => write!(f, "#{}", i),
-            SelectorElement::Tag(t) => write!(f, "{}", t),
-            SelectorElement::Media(m) => write!(f, "@{} ", m),
-            SelectorElement::PseudoClass(pc) => write!(f, ":{}", pc),
+            SelectorElement::Class(c) => write!(f, ".{c}"),
+            SelectorElement::Id(i) => write!(f, "#{i}"),
+            SelectorElement::Tag(t) => write!(f, "{t}"),
+            SelectorElement::Media(m) => write!(f, "@{m} "),
+            SelectorElement::PseudoClass(pc) => write!(f, ":{pc}"),
         }
     }
 }
@@ -269,14 +269,14 @@ impl fmt::Display for Token<'_> {
         match *self {
             // Token::AtRule(at_rule) => write!(f, "{}", at_rule, content),
             // Token::ElementRule(selectors) => write!(f, "{}", x),
-            Token::Comment(c) => write!(f, "{}", c),
-            Token::License(l) => writeln!(f, "/*!{}*/", l),
-            Token::Char(c) => write!(f, "{}", c),
-            Token::Other(s) => write!(f, "{}", s),
-            Token::SelectorElement(ref se) => write!(f, "{}", se),
-            Token::String(s) => write!(f, "{}", s),
-            Token::SelectorOperator(so) => write!(f, "{}", so),
-            Token::Operator(op) => write!(f, "{}", op),
+            Token::Comment(c) => write!(f, "{c}"),
+            Token::License(l) => writeln!(f, "/*!{l}*/"),
+            Token::Char(c) => write!(f, "{c}"),
+            Token::Other(s) => write!(f, "{s}"),
+            Token::SelectorElement(ref se) => write!(f, "{se}"),
+            Token::String(s) => write!(f, "{s}"),
+            Token::SelectorOperator(so) => write!(f, "{so}"),
+            Token::Operator(op) => write!(f, "{op}"),
         }
     }
 }
@@ -686,7 +686,7 @@ pub(super) struct Tokens<'a>(Vec<Token<'a>>);
 impl Tokens<'_> {
     pub(super) fn write<W: std::io::Write>(self, mut w: W) -> std::io::Result<()> {
         for token in self.0.iter() {
-            write!(w, "{}", token)?;
+            write!(w, "{token}")?;
         }
         Ok(())
     }
@@ -695,7 +695,7 @@ impl Tokens<'_> {
 impl fmt::Display for Tokens<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for token in self.0.iter() {
-            write!(f, "{}", token)?;
+            write!(f, "{token}")?;
         }
         Ok(())
     }

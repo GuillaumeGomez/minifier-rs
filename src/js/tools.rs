@@ -482,7 +482,7 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
             to_insert.push((0, Token::Char(ReservedChar::SemiColon)));
             to_insert.push((0, Token::Char(ReservedChar::CloseBracket)));
             to_insert.push((0, Token::Char(ReservedChar::OpenBracket)));
-            to_insert.push((0, Token::CreatedVarDecl(format!("var {}=", array_name))));
+            to_insert.push((0, Token::CreatedVarDecl(format!("var {array_name}="))));
 
             end_bracket = 2;
         }
@@ -490,7 +490,7 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
         let mut iter = validated.iter().peekable();
         while let Some((array_pos, s)) = iter.next() {
             let (_, ref tokens_pos, create_array_entry) = strs[*s];
-            let array_index = Token::CreatedVar(format!("{}[{}]", array_name, array_pos));
+            let array_index = Token::CreatedVar(format!("{array_name}[{array_pos}]"));
             for token in tokens_pos.iter() {
                 to_replace.push((*token, array_index.clone()));
             }

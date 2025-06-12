@@ -134,25 +134,28 @@ fn write_out_file(file_path: &PathBuf, out_path: Option<&PathBuf>, ext: Option<&
         &FileType::from(file_path)
     };
     if file_ext == &FileType::Unknown {
-        eprintln!("{:?}: unknow file extension...", file_path);
+        eprintln!("{file_path:?}: unknow file extension...");
         return;
     };
     match get_all_data(file_path) {
         Ok(content) => {
-            let out = if out_path.is_some() {
-                let mut op = out_path.unwrap().clone();
-                if op.is_dir() {
-                    op.push(file_path);
-                    op.set_extension(format!("min.{}", file_ext.as_str()));
-                };
-                if op.parent().is_some() && !op.parent().unwrap().is_dir() {
-                    std::fs::create_dir_all(op.parent().unwrap()).unwrap();
-                };
-                op
-            } else {
-                let mut p = file_path.clone();
-                p.set_extension(format!("min.{}", file_ext.as_str()));
-                p
+            let out = match out_path {
+                Some(op) => {
+                    let mut op = op.clone();
+                    if op.is_dir() {
+                        op.push(file_path);
+                        op.set_extension(format!("min.{}", file_ext.as_str()));
+                    };
+                    if op.parent().is_some() && !op.parent().unwrap().is_dir() {
+                        std::fs::create_dir_all(op.parent().unwrap()).unwrap();
+                    };
+                    op
+                }
+                None => {
+                    let mut p = file_path.clone();
+                    p.set_extension(format!("min.{}", file_ext.as_str()));
+                    p
+                }
             };
             if let Ok(mut file) = OpenOptions::new()
                 .truncate(true)
@@ -167,18 +170,18 @@ fn write_out_file(file_path: &PathBuf, out_path: Option<&PathBuf>, ext: Option<&
                         }
                         FileType::Js => js::minify(s).to_string(),
                         FileType::Json => json::minify(s).to_string(),
-                        FileType::Unknown => panic!("{:?}: unknow file extension...", file_path),
+                        FileType::Unknown => panic!("{file_path:?}: unknow file extension..."),
                     }
                 };
                 if let Err(e) = write!(file, "{}", func(&content)) {
-                    eprintln!("Impossible to write into {:?}: {}", out, e);
+                    eprintln!("Impossible to write into {out:?}: {e}");
                 } else {
-                    println!("{:?}: done -> generated into {:?}", file_path, out);
+                    println!("{file_path:?}: done -> generated into {out:?}");
                 }
             } else {
-                eprintln!("Impossible to create new file: {:?}", out);
+                eprintln!("Impossible to create new file: {out:?}");
             }
         }
-        Err(e) => eprintln!("{:?}: {}", file_path, e),
+        Err(e) => eprintln!("{file_path:?}: {e}"),
     }
 }
