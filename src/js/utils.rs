@@ -274,6 +274,7 @@ fn get_next<'a>(it: &mut IntoIter<Token<'a>>) -> Option<Token<'a>> {
 ///     println!("result: {:?}", s);
 /// }
 /// ```
+#[allow(clippy::collapsible_if)]
 pub fn clean_tokens(tokens: Tokens<'_>) -> Tokens<'_> {
     let mut v = Vec::with_capacity(tokens.len() / 3 * 2);
     let mut it = tokens.0.into_iter();
@@ -290,13 +291,15 @@ pub fn clean_tokens(tokens: Tokens<'_>) -> Tokens<'_> {
             if v.is_empty() {
                 continue;
             }
-            if let Some(next) = get_next(&mut it) {
-                if next != Token::Char(ReservedChar::CloseCurlyBrace) {
-                    v.push(token);
-                }
-                v.push(next);
-            }
-            continue;
+            // FIXME: `for` and `while` loops can have their block replaced by a `;`. So as long
+            // as we don't have an AST, we cannot keep this optimization.
+            // if let Some(next) = get_next(&mut it) {
+            //     if next != Token::Char(ReservedChar::CloseCurlyBrace) {
+            //         v.push(token);
+            //     }
+            //     v.push(next);
+            // }
+            // continue;
         }
         v.push(token);
     }
@@ -535,7 +538,7 @@ fn replace_tokens() {
 var x = ['a', 'b', null, 'd', {'x': null, 'e': null, 'z': 'w'}];
 var n = null;
 "#;
-    let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N";
+    let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
 
     let res = crate::js::simple_minify(source)
         .apply(crate::js::clean_tokens)

@@ -386,16 +386,16 @@ pub enum Token<'a> {
 impl fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Token::Keyword(x) => write!(f, "{}", x),
-            Token::Char(x) => write!(f, "{}", x),
-            Token::String(x) | Token::Comment(x) | Token::Other(x) => write!(f, "{}", x),
-            Token::License(x) => write!(f, "/*!{}*/", x),
+            Token::Keyword(x) => write!(f, "{x}"),
+            Token::Char(x) => write!(f, "{x}"),
+            Token::String(x) | Token::Comment(x) | Token::Other(x) => write!(f, "{x}"),
+            Token::License(x) => write!(f, "/*!{x}*/"),
             Token::Regex {
                 regex,
                 is_global,
                 is_interactive,
             } => {
-                let x = write!(f, "/{}/", regex);
+                let x = write!(f, "/{regex}/");
                 if is_global {
                     write!(f, "g")?;
                 }
@@ -404,12 +404,12 @@ impl fmt::Display for Token<'_> {
                 }
                 x
             }
-            Token::Condition(x) => write!(f, "{}", x),
-            Token::Operation(x) => write!(f, "{}", x),
-            Token::CreatedVarDecl(ref x) => write!(f, "{}", x),
-            Token::CreatedVar(ref x) => write!(f, "{}", x),
-            Token::Number(x) => write!(f, "{}", x),
-            Token::FloatingNumber(ref x) => write!(f, "{}", x),
+            Token::Condition(x) => write!(f, "{x}"),
+            Token::Operation(x) => write!(f, "{x}"),
+            Token::CreatedVarDecl(ref x) => write!(f, "{x}"),
+            Token::CreatedVar(ref x) => write!(f, "{x}"),
+            Token::Number(x) => write!(f, "{x}"),
+            Token::FloatingNumber(ref x) => write!(f, "{x}"),
         }
     }
 }
@@ -1091,7 +1091,7 @@ impl<'a> From<&[Token<'a>]> for Tokens<'a> {
 #[test]
 fn check_regex() {
     let source = r#"var x = /"\.x/g;"#;
-    let expected_result = r#"var x=/"\.x/g"#;
+    let expected_result = r#"var x=/"\.x/g;"#;
     assert_eq!(crate::js::minify(source).to_string(), expected_result);
 
     let v = tokenize(source).apply(crate::js::clean_tokens);
@@ -1105,7 +1105,7 @@ fn check_regex() {
     );
 
     let source = r#"var x = /"\.x/gigigigig;var x = "hello";"#;
-    let expected_result = r#"var x=/"\.x/gi;var x="hello""#;
+    let expected_result = r#"var x=/"\.x/gi;var x="hello";"#;
     assert_eq!(crate::js::minify(source).to_string(), expected_result);
 
     let v = tokenize(source).apply(crate::js::clean_tokens);
@@ -1122,7 +1122,7 @@ fn check_regex() {
 #[test]
 fn more_regex() {
     let source = r#"var x = /"\.x\/a/i;"#;
-    let expected_result = r#"var x=/"\.x\/a/i"#;
+    let expected_result = r#"var x=/"\.x\/a/i;"#;
     assert_eq!(crate::js::minify(source).to_string(), expected_result);
 
     let v = tokenize(source).apply(crate::js::clean_tokens);
@@ -1136,7 +1136,7 @@ fn more_regex() {
     );
 
     let source = r#"var x = /\\/i;"#;
-    let expected_result = r#"var x=/\\/i"#;
+    let expected_result = r#"var x=/\\/i;"#;
     assert_eq!(crate::js::minify(source).to_string(), expected_result);
 
     let v = tokenize(source).apply(crate::js::clean_tokens);
@@ -1201,7 +1201,8 @@ fn not_regex_test() {
             Token::Operation(Operation::Divide),
             Token::Other("x"),
             Token::Other("y"),
-            Token::Operation(Operation::Divide)
+            Token::Operation(Operation::Divide),
+            Token::Char(ReservedChar::SemiColon),
         ]
     );
 }
@@ -1287,7 +1288,8 @@ fn test_number_parsing2() {
             Token::Operation(Operation::Equal),
             Token::Number(12),
             Token::Char(ReservedChar::Dot),
-            Token::Other("a")
+            Token::Other("a"),
+            Token::Char(ReservedChar::SemiColon),
         ]
     );
 }
