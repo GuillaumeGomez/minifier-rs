@@ -9,7 +9,7 @@ pub use self::tools::{
     aggregate_strings, aggregate_strings_into_array, aggregate_strings_into_array_filter,
     aggregate_strings_into_array_with_separation,
     aggregate_strings_into_array_with_separation_filter, aggregate_strings_with_separation, minify,
-    simple_minify,
+    simple_minify, Minified,
 };
 pub use self::utils::{
     clean_token, clean_token_except, clean_tokens, clean_tokens_except,
