@@ -689,10 +689,17 @@ fn get_string<'a>(
     None
 }
 
+// Maximum nesting depth for template literals inside `${ ... }` interpolations.
+// Each nested backtick recurses into `get_backtick_string`, so an unbounded depth
+// (driven purely by attacker-controlled input length) exhausts the native stack.
+// Legitimate code never nests anywhere near this deep.
+const MAX_BACKTICK_NESTING: usize = 1000;
+
 fn get_backtick_string<'a>(
     source: &'a str,
     iterator: &mut MyPeekable<'_>,
     start_pos: &mut usize,
+    depth: usize,
 ) -> Option<Token<'a>> {
     while let Some((pos, c)) = iterator.next() {
         if c == '\\' {
@@ -719,7 +726,13 @@ fn get_backtick_string<'a>(
                                 .expect("ReservedChar::try_from unexpectedly failed..."),
                         );
                     } else if c == '`' {
-                        get_backtick_string(source, iterator, &mut pos);
+                        if depth >= MAX_BACKTICK_NESTING {
+                            // Panic is better than overflowing the stack and crashing the process.
+                            panic!(
+                                "Backtick nesting depth exceeded maximum of {MAX_BACKTICK_NESTING}"
+                            );
+                        }
+                        get_backtick_string(source, iterator, &mut pos, depth + 1);
                     } else if c == '{' {
                         count += 1;
                     } else if c == '}' {
@@ -939,7 +952,7 @@ pub fn tokenize(source: &str) -> Tokens<'_> {
                     }
                 }
                 ReservedChar::BackTick => {
-                    if let Some(s) = get_backtick_string(source, &mut iterator, &mut pos) {
+                    if let Some(s) = get_backtick_string(source, &mut iterator, &mut pos, 0) {
                         v.push(s);
                     }
                 }
@@ -1086,6 +1099,15 @@ impl<'a> From<&[Token<'a>]> for Tokens<'a> {
     fn from(v: &[Token<'a>]) -> Self {
         Tokens(v.to_vec())
     }
+}
+
+#[test]
+fn deeply_nested_backtick_does_not_overflow_stack() {
+    // Each "`${" unit forces one more recursion level in `get_backtick_string`.
+    // Without a nesting cap this overflows the native stack and aborts the process
+    // for a few hundred KB of input; with the cap it returns normally.
+    let source = "`${".repeat(100_000);
+    let _ = crate::js::minify(&source).to_string();
 }
 
 #[test]
