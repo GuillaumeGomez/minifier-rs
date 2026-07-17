@@ -661,6 +661,7 @@ fn get_comment<'a>(
         }
     }
     // Unclosed comment so returning it anyway...
+    current_pos = std::cmp::min(current_pos, source.len() - 1);
     let ret = builder(&source[*start_pos..=current_pos]);
     *start_pos = current_pos + 2;
     ret
@@ -1405,4 +1406,14 @@ fn test_comments() {
             Token::Other("a"),
         ],
     );
+}
+
+#[test]
+fn test_unclosed_comment_at_eof() {
+    // An unterminated `/*` at end of input must not panic on an out-of-bounds
+    // string slice; the comment body simply runs to the end of the source.
+    assert_eq!(&tokenize("/*").0, &[Token::Comment("")]);
+    assert_eq!(&tokenize("a/*").0, &[Token::Other("a"), Token::Comment("")]);
+    assert_eq!(&tokenize("/*x").0, &[Token::Comment("x")]);
+    assert_eq!(&tokenize("/*!").0, &[Token::License("")]);
 }
