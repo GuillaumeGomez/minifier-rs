@@ -727,10 +727,7 @@ fn get_backtick_string<'a>(
                         );
                     } else if c == '`' {
                         if depth >= MAX_BACKTICK_NESTING {
-                            // Panic is better than overflowing the stack and crashing the process.
-                            panic!(
-                                "Backtick nesting depth exceeded maximum of {MAX_BACKTICK_NESTING}"
-                            );
+                            return None;
                         }
                         get_backtick_string(source, iterator, &mut pos, depth + 1);
                     } else if c == '{' {
