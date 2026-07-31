@@ -701,7 +701,7 @@ fn get_backtick_string<'a>(
     iterator: &mut MyPeekable<'_>,
     start_pos: &mut usize,
     depth: usize,
-) -> Option<Token<'a>> {
+) -> Result<Option<Token<'a>>, &'static str> {
     while let Some((pos, c)) = iterator.next() {
         if c == '\\' {
             // we skip next character
@@ -728,9 +728,9 @@ fn get_backtick_string<'a>(
                         );
                     } else if c == '`' {
                         if depth >= MAX_BACKTICK_NESTING {
-                            return None;
+                            return Err("Too nested backtick (`) string");
                         }
-                        get_backtick_string(source, iterator, &mut pos, depth + 1);
+                        get_backtick_string(source, iterator, &mut pos, depth + 1)?;
                     } else if c == '{' {
                         count += 1;
                     } else if c == '}' {
@@ -740,16 +740,16 @@ fn get_backtick_string<'a>(
                         }
                     }
                 } else {
-                    return None;
+                    return Ok(None);
                 }
             }
         } else if c == '`' {
             let ret = Some(Token::String(&source[*start_pos..pos + 1]));
             *start_pos = pos;
-            return ret;
+            return Ok(ret);
         }
     }
-    None
+    Ok(None)
 }
 
 fn first_useful<'a>(v: &'a [Token<'a>]) -> Option<&'a Token<'a>> {
@@ -915,7 +915,7 @@ impl Iterator for MyPeekable<'_> {
     }
 }
 
-pub fn tokenize(source: &str) -> Tokens<'_> {
+pub fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
     let mut v = Vec::with_capacity(1000);
     let mut start = 0;
     let mut iterator = MyPeekable::new(source.char_indices());
@@ -950,7 +950,7 @@ pub fn tokenize(source: &str) -> Tokens<'_> {
                     }
                 }
                 ReservedChar::BackTick => {
-                    if let Some(s) = get_backtick_string(source, &mut iterator, &mut pos, 0) {
+                    if let Some(s) = get_backtick_string(source, &mut iterator, &mut pos, 0)? {
                         v.push(s);
                     }
                 }
@@ -1014,7 +1014,7 @@ pub fn tokenize(source: &str) -> Tokens<'_> {
             start = pos + 1;
         }
     }
-    Tokens(v)
+    Ok(Tokens(v))
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -1105,16 +1105,19 @@ fn deeply_nested_backtick_does_not_overflow_stack() {
     // Without a nesting cap this overflows the native stack and aborts the process
     // for a few hundred KB of input; with the cap it returns normally.
     let source = "`${".repeat(100_000);
-    let _ = crate::js::minify(&source).to_string();
+    assert!(crate::js::minify(&source).is_err());
 }
 
 #[test]
 fn check_regex() {
     let source = r#"var x = /"\.x/g;"#;
     let expected_result = r#"var x=/"\.x/g;"#;
-    assert_eq!(crate::js::minify(source).to_string(), expected_result);
+    assert_eq!(
+        crate::js::minify(source).unwrap().to_string(),
+        expected_result
+    );
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1126,9 +1129,12 @@ fn check_regex() {
 
     let source = r#"var x = /"\.x/gigigigig;var x = "hello";"#;
     let expected_result = r#"var x=/"\.x/gi;var x="hello";"#;
-    assert_eq!(crate::js::minify(source).to_string(), expected_result);
+    assert_eq!(
+        crate::js::minify(source).unwrap().to_string(),
+        expected_result
+    );
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1143,9 +1149,12 @@ fn check_regex() {
 fn more_regex() {
     let source = r#"var x = /"\.x\/a/i;"#;
     let expected_result = r#"var x=/"\.x\/a/i;"#;
-    assert_eq!(crate::js::minify(source).to_string(), expected_result);
+    assert_eq!(
+        crate::js::minify(source).unwrap().to_string(),
+        expected_result
+    );
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1157,9 +1166,12 @@ fn more_regex() {
 
     let source = r#"var x = /\\/i;"#;
     let expected_result = r#"var x=/\\/i;"#;
-    assert_eq!(crate::js::minify(source).to_string(), expected_result);
+    assert_eq!(
+        crate::js::minify(source).unwrap().to_string(),
+        expected_result
+    );
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1174,7 +1186,7 @@ fn more_regex() {
 fn even_more_regex() {
     let source = r#"var x = /a-z /;"#;
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         v.0[3],
         Token::Regex {
@@ -1189,7 +1201,7 @@ fn even_more_regex() {
 fn not_regex_test() {
     let source = "( x ) / 2; x / y;x /= y";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1211,7 +1223,7 @@ fn not_regex_test() {
 
     let source = "let x = /x\ny/;";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1231,7 +1243,7 @@ fn not_regex_test() {
 fn test_tokens_parsing() {
     let source = "true = == 2.3 === 32";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1249,7 +1261,7 @@ fn test_tokens_parsing() {
 fn test_string_parsing() {
     let source = "var x = 'hello people!'";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1265,7 +1277,7 @@ fn test_string_parsing() {
 fn test_number_parsing() {
     let source = "var x = .12; let y = 4.; var z = 12; .3 4. 'a' let u = 12.2";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1299,7 +1311,7 @@ fn test_number_parsing() {
 fn test_number_parsing2() {
     let source = "var x = 12.a;";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1318,7 +1330,7 @@ fn test_number_parsing2() {
 fn tokens_spaces() {
     let source = "t in e";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1333,7 +1345,7 @@ fn tokens_spaces() {
 fn division_by_id() {
     let source = "100/abc";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1348,7 +1360,7 @@ fn division_by_id() {
 fn weird_regex() {
     let source = "if (!/\\/(contact|legal)\\//.test(a)) {}";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1376,7 +1388,7 @@ fn weird_regex() {
 fn test_regexes() {
     let source = "/\\/(contact|legal)\\//.test";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1392,7 +1404,7 @@ fn test_regexes() {
 
     let source = "/\\*(contact|legal)/.test";
 
-    let v = tokenize(source).apply(crate::js::clean_tokens);
+    let v = tokenize(source).unwrap().apply(crate::js::clean_tokens);
     assert_eq!(
         &v.0,
         &[
@@ -1411,12 +1423,12 @@ fn test_regexes() {
 fn test_comments() {
     let source = "/*(contact|legal)/.test";
 
-    let v = tokenize(source);
+    let v = tokenize(source).unwrap();
     assert_eq!(&v.0, &[Token::Comment("(contact|legal)/.test"),],);
 
     let source = "/*(contact|legal)/.test*/ a";
 
-    let v = tokenize(source);
+    let v = tokenize(source).unwrap();
     assert_eq!(
         &v.0,
         &[
@@ -1431,8 +1443,11 @@ fn test_comments() {
 fn test_unclosed_comment_at_eof() {
     // An unterminated `/*` at end of input must not panic on an out-of-bounds
     // string slice; the comment body simply runs to the end of the source.
-    assert_eq!(&tokenize("/*").0, &[Token::Comment("")]);
-    assert_eq!(&tokenize("a/*").0, &[Token::Other("a"), Token::Comment("")]);
-    assert_eq!(&tokenize("/*x").0, &[Token::Comment("x")]);
-    assert_eq!(&tokenize("/*!").0, &[Token::License("")]);
+    assert_eq!(&tokenize("/*").unwrap().0, &[Token::Comment("")]);
+    assert_eq!(
+        &tokenize("a/*").unwrap().0,
+        &[Token::Other("a"), Token::Comment("")]
+    );
+    assert_eq!(&tokenize("/*x").unwrap().0, &[Token::Comment("x")]);
+    assert_eq!(&tokenize("/*!").unwrap().0, &[Token::License("")]);
 }

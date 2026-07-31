@@ -168,7 +168,7 @@ fn write_out_file(file_path: &PathBuf, out_path: Option<&PathBuf>, ext: Option<&
                         FileType::Css => {
                             css::minify(s).expect("css minification failed").to_string()
                         }
-                        FileType::Js => js::minify(s).to_string(),
+                        FileType::Js => js::minify(s).expect("js minification failed").to_string(),
                         FileType::Json => json::minify(s).to_string(),
                         FileType::Unknown => panic!("{file_path:?}: unknow file extension..."),
                     }

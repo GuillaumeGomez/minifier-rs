@@ -82,31 +82,29 @@ impl<'a> VariableNameGenerator<'a> {
 /// # Example
 ///
 /// ```rust
-/// extern crate minifier;
 /// use minifier::js::{Keyword, Token, replace_tokens_with, simple_minify};
 ///
-/// fn main() {
-///     let js = r#"
-///         function replaceByNull(data, func) {
-///             for (var i = 0; i < data.length; ++i) {
-///                 if func(data[i]) {
-///                     data[i] = null;
-///                 }
+/// let js = r#"
+///     function replaceByNull(data, func) {
+///         for (var i = 0; i < data.length; ++i) {
+///             if func(data[i]) {
+///                 data[i] = null;
 ///             }
 ///         }
-///     }"#.into();
-///     let js_minified = simple_minify(js)
-///         .apply(|f| {
-///             replace_tokens_with(f, |t| {
-///                 if *t == Token::Keyword(Keyword::Null) {
-///                     Some(Token::Other("N"))
-///                 } else {
-///                     None
-///                 }
-///             })
-///         });
-///     println!("{}", js_minified.to_string());
-/// }
+///     }
+/// }"#.into();
+/// let js_minified = simple_minify(js)
+///     .unwrap()
+///     .apply(|f| {
+///         replace_tokens_with(f, |t| {
+///             if *t == Token::Keyword(Keyword::Null) {
+///                 Some(Token::Other("N"))
+///             } else {
+///                 None
+///             }
+///         })
+///     });
+/// println!("{}", js_minified.to_string());
 /// ```
 ///
 /// The previous code will have all its `null` keywords replaced with `N`. In such cases,
@@ -152,27 +150,24 @@ pub fn replace_token_with<'a, 'b: 'a, F: Fn(&Token<'a>) -> Option<Token<'b>>>(
 /// # Examples
 ///
 /// ```
-/// extern crate minifier;
 /// use minifier::js::{Keyword, get_variable_name_and_value_positions, simple_minify};
 ///
-/// fn main() {
-///     let source = r#"var x = 1;var z;var y   =   "2";"#;
-///     let mut result = Vec::new();
+/// let source = r#"var x = 1;var z;var y   =   "2";"#;
+/// let mut result = Vec::new();
 ///
-///     let tokens = simple_minify(source);
+/// let tokens = simple_minify(source).unwrap();
 ///
-///     for pos in 0..tokens.len() {
-///         match tokens[pos].get_keyword() {
-///             Some(k) if k == Keyword::Let || k == Keyword::Var => {
-///                 if let Some(x) = get_variable_name_and_value_positions(&tokens, pos) {
-///                     result.push(x);
-///                 }
+/// for pos in 0..tokens.len() {
+///     match tokens[pos].get_keyword() {
+///         Some(k) if k == Keyword::Let || k == Keyword::Var => {
+///             if let Some(x) = get_variable_name_and_value_positions(&tokens, pos) {
+///                 result.push(x);
 ///             }
-///             _ => {}
 ///         }
+///         _ => {}
 ///     }
-///     assert_eq!(result, vec![(2, Some(6)), (10, None), (14, Some(22))]);
 /// }
+/// assert_eq!(result, vec![(2, Some(6)), (10, None), (14, Some(22))]);
 /// ```
 pub fn get_variable_name_and_value_positions<'a>(
     tokens: &'a Tokens<'a>,
@@ -261,18 +256,14 @@ fn get_next<'a>(it: &mut IntoIter<Token<'a>>) -> Option<Token<'a>> {
 /// # Example
 ///
 /// ```rust,no_run
-/// extern crate minifier;
-///
 /// use minifier::js::{clean_tokens, simple_minify};
 /// use std::fs;
 ///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source); // First we get the tokens list.
-///     let s = s.apply(clean_tokens);  // We now have a cleaned token list!
-///     println!("result: {:?}", s);
-/// }
+/// let content = fs::read("some_file.js").expect("file not found");
+/// let source = String::from_utf8_lossy(&content);
+/// let s = simple_minify(&source).unwrap(); // First we get the tokens list.
+/// let s = s.apply(clean_tokens);           // We now have a cleaned token list!
+/// println!("result: {:?}", s);
 /// ```
 #[allow(clippy::collapsible_if)]
 pub fn clean_tokens(tokens: Tokens<'_>) -> Tokens<'_> {
@@ -341,22 +332,18 @@ fn get_next_except<'a, F: Fn(&Token<'a>) -> bool>(
 /// # Example
 ///
 /// ```rust,no_run
-/// extern crate minifier;
-///
 /// use minifier::js::{clean_tokens_except, simple_minify, ReservedChar};
 /// use std::fs;
 ///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source); // First we get the tokens list.
-///     let s = s.apply(|f| {
-///         clean_tokens_except(f, |c| {
-///             c.get_char() != Some(ReservedChar::Backline)
-///         })
-///     });  // We now have a cleaned token list which kept backlines!
-///     println!("result: {:?}", s);
-/// }
+/// let content = fs::read("some_file.js").expect("file not found");
+/// let source = String::from_utf8_lossy(&content);
+/// let s = simple_minify(&source).unwrap(); // First we get the tokens list.
+/// let s = s.apply(|f| {
+///     clean_tokens_except(f, |c| {
+///         c.get_char() != Some(ReservedChar::Backline)
+///     })
+/// });  // We now have a cleaned token list which kept backlines!
+/// println!("result: {:?}", s);
 /// ```
 pub fn clean_tokens_except<'a, F: Fn(&Token<'a>) -> bool>(tokens: Tokens<'a>, f: F) -> Tokens<'a> {
     let mut v = Vec::with_capacity(tokens.len() / 3 * 2);
@@ -480,7 +467,7 @@ fn check_get_array() {
     let source = r#"var x = [  ]; var y = ['hello',
     12]; var z = []; var w = 12;"#;
 
-    let tokens = crate::js::token::tokenize(source);
+    let tokens = crate::js::token::tokenize(source).unwrap();
 
     let ar = get_array(&tokens, "x");
     assert!(ar.is_some());
@@ -507,7 +494,7 @@ fn check_get_variable_name_and_value_positions() {
     let mut result = Vec::new();
     let mut pos = 0;
 
-    let tokens = crate::js::token::tokenize(source);
+    let tokens = crate::js::token::tokenize(source).unwrap();
 
     while pos < tokens.len() {
         if let Some(x) = get_variable_name_and_value_positions(&tokens, pos) {
@@ -541,6 +528,7 @@ var n = null;
     let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
 
     let res = crate::js::simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|f| {
             replace_tokens_with(f, |t| {
@@ -562,7 +550,10 @@ var n = null;
 "#;
     let expected_result = "var x=['a','b',N,'d',{'x':N,'e':N,'z':'w'}];var n=N;";
 
-    let mut iter = crate::js::simple_minify(source).into_iter().peekable();
+    let mut iter = crate::js::simple_minify(source)
+        .unwrap()
+        .into_iter()
+        .peekable();
     let mut tokens = Vec::new();
     while let Some(token) = iter.next() {
         if crate::js::clean_token(&token, &iter.peek()) {
