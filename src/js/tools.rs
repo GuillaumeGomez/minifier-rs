@@ -178,15 +178,17 @@ fn build_ast<'a>(v: &[token::Token<'a>]) -> Result<Elem<'a>, String> {
 ///            func(data[i]);
 ///        }
 ///     }"#.into();
-/// let js_minified = minify(js);
+/// let js_minified = minify(js).expect("invalid input");
 /// assert_eq!(
 ///     &js_minified.to_string(),
 ///     "function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i]);}}",
 /// );
 /// ```
 #[inline]
-pub fn minify(source: &str) -> Minified<'_> {
-    Minified(token::tokenize(source).apply(crate::js::clean_tokens))
+pub fn minify(source: &str) -> Result<Minified<'_>, &'static str> {
+    Ok(Minified(
+        token::tokenize(source)?.apply(crate::js::clean_tokens),
+    ))
 }
 
 pub struct Minified<'a>(token::Tokens<'a>);
@@ -335,19 +337,16 @@ fn aggregate_strings_inner<'a, 'b: 'a>(
 /// # Example
 ///
 /// ```rust,no_run
-/// extern crate minifier;
 /// use minifier::js::{aggregate_strings, clean_tokens, simple_minify};
 /// use std::fs;
 ///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source);    // First we get the tokens list.
-///     let s = s.apply(aggregate_strings) // This `apply` aggregates string litterals.
-///              .apply(clean_tokens)      // This one is used to remove useless chars.
-///              .to_string();             // And we finally convert to string.
-///     println!("result: {}", s);
-/// }
+/// let content = fs::read("some_file.js").expect("file not found");
+/// let source = String::from_utf8_lossy(&content);
+/// let s = simple_minify(&source).unwrap(); // First we get the tokens list.
+/// let s = s.apply(aggregate_strings)       // This `apply` aggregates string litterals.
+///          .apply(clean_tokens)            // This one is used to remove useless chars.
+///          .to_string();                   // And we finally convert to string.
+/// println!("result: {}", s);
 /// ```
 #[inline]
 pub fn aggregate_strings(tokens: Tokens<'_>) -> Tokens<'_> {
@@ -363,7 +362,6 @@ pub fn aggregate_strings(tokens: Tokens<'_>) -> Tokens<'_> {
 /// Let's add a backline between the created variables and the rest of the code:
 ///
 /// ```rust,no_run
-/// extern crate minifier;
 /// use minifier::js::{
 ///     aggregate_strings_with_separation,
 ///     clean_tokens,
@@ -373,17 +371,15 @@ pub fn aggregate_strings(tokens: Tokens<'_>) -> Tokens<'_> {
 /// };
 /// use std::fs;
 ///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source);    // First we get the tokens list.
-///     let s = s.apply(|f| {
-///                  aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline))
-///              })                   // We add a backline between the variable and the rest.
-///              .apply(clean_tokens) // We clean the tokens.
-///              .to_string();        // And we finally convert to string.
-///     println!("result: {}", s);
-/// }
+/// let content = fs::read("some_file.js").expect("file not found");
+/// let source = String::from_utf8_lossy(&content);
+/// let s = simple_minify(&source).unwrap();    // First we get the tokens list.
+/// let s = s.apply(|f| {
+///         aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline))
+///     })                   // We add a backline between the variable and the rest.
+///     .apply(clean_tokens) // We clean the tokens.
+///     .to_string();        // And we finally convert to string.
+/// println!("result: {}", s);
 /// ```
 #[inline]
 pub fn aggregate_strings_with_separation<'a, 'b: 'a>(
@@ -522,7 +518,6 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
 /// Let's add a backline between the created variables and the rest of the code:
 ///
 /// ```rust,no_run
-/// extern crate minifier;
 /// use minifier::js::{
 ///     aggregate_strings_into_array_with_separation,
 ///     clean_tokens,
@@ -532,17 +527,15 @@ fn aggregate_strings_into_array_inner<'a, 'b: 'a, T: Fn(&Tokens<'a>, usize) -> b
 /// };
 /// use std::fs;
 ///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source);    // First we get the tokens list.
-///     let s = s.apply(|f| {
-///                  aggregate_strings_into_array_with_separation(f, "R", Token::Char(ReservedChar::Backline))
-///              })                   // We add a backline between the variable and the rest.
-///              .apply(clean_tokens) // We clean the tokens.
-///              .to_string();        // And we finally convert to string.
-///     println!("result: {}", s);
-/// }
+/// let content = fs::read("some_file.js").expect("file not found");
+/// let source = String::from_utf8_lossy(&content);
+/// let s = simple_minify(&source).unwrap();    // First we get the tokens list.
+/// let s = s.apply(|f| {
+///         aggregate_strings_into_array_with_separation(f, "R", Token::Char(ReservedChar::Backline))
+///     })                   // We add a backline between the variable and the rest.
+///     .apply(clean_tokens) // We clean the tokens.
+///     .to_string();        // And we finally convert to string.
+/// println!("result: {}", s);
 /// ```
 #[inline]
 pub fn aggregate_strings_into_array_with_separation<'a, 'b: 'a>(
@@ -577,19 +570,16 @@ where
 /// # Example
 ///
 /// ```rust,no_run
-/// extern crate minifier;
 /// use minifier::js::{aggregate_strings_into_array, clean_tokens, simple_minify};
 /// use std::fs;
 ///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source);    // First we get the tokens list.
-///     let s = s.apply(|f| aggregate_strings_into_array(f, "R")) // This `apply` aggregates string litterals.
-///              .apply(clean_tokens)      // This one is used to remove useless chars.
-///              .to_string();             // And we finally convert to string.
-///     println!("result: {}", s);
-/// }
+/// let content = fs::read("some_file.js").expect("file not found");
+/// let source = String::from_utf8_lossy(&content);
+/// let s = simple_minify(&source).unwrap(); // First we get the tokens list.
+/// let s = s.apply(|f| aggregate_strings_into_array(f, "R")) // This `apply` aggregates string litterals.
+///          .apply(clean_tokens)      // This one is used to remove useless chars.
+///          .to_string();             // And we finally convert to string.
+/// println!("result: {}", s);
 /// ```
 #[inline]
 pub fn aggregate_strings_into_array<'a>(tokens: Tokens<'a>, array_name: &str) -> Tokens<'a> {
@@ -616,19 +606,16 @@ where
 /// # Example
 ///
 /// ```rust,no_run
-/// extern crate minifier;
 /// use minifier::js::simple_minify;
 /// use std::fs;
 ///
-/// fn main() {
-///     let content = fs::read("some_file.js").expect("file not found");
-///     let source = String::from_utf8_lossy(&content);
-///     let s = simple_minify(&source);
-///     println!("result: {:?}", s); // We now have the tokens list.
-/// }
+/// let content = fs::read("some_file.js").expect("file not found");
+/// let source = String::from_utf8_lossy(&content);
+/// let s = simple_minify(&source).expect("invalid input");
+/// println!("result: {:?}", s); // We now have the tokens list.
 /// ```
 #[inline]
-pub fn simple_minify(source: &str) -> Tokens<'_> {
+pub fn simple_minify(source: &str) -> Result<Tokens<'_>, &'static str> {
     token::tokenize(source)
 }
 
@@ -640,6 +627,7 @@ fn aggregate_strings_in_array() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
@@ -651,6 +639,7 @@ fn aggregate_strings_in_array() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|c| {
             aggregate_strings_into_array_with_separation(
@@ -668,6 +657,7 @@ fn aggregate_strings_in_array() {
                            R[2],R[2]];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|c| {
             aggregate_strings_into_array_with_separation(
@@ -686,6 +676,7 @@ fn aggregate_strings_in_array_filter() {
     let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],'duplicate_paths':R[1]};";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|c| {
             aggregate_strings_into_array_with_separation_filter(
@@ -706,6 +697,7 @@ fn aggregate_strings_in_array_filter() {
     let expected_result = "var R=[\"bbbbbbbb\",\"aaaaaaaa\",\"duplicate_paths\"];\nvar searchIndex={};searchIndex['duplicate_paths']={R[1]:R[0],R[0]:R[1],R[2]:R[1],'x':R[2]};";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|c| {
             aggregate_strings_into_array_with_separation_filter(
@@ -731,6 +723,7 @@ fn aggregate_strings_in_array_existing() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
@@ -742,6 +735,7 @@ fn aggregate_strings_in_array_existing() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
@@ -753,6 +747,7 @@ fn aggregate_strings_in_array_existing() {
                            \"another nice string\",R[1],R[1],R[0],R[1],R[1],R[1]];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
@@ -765,6 +760,7 @@ fn aggregate_strings_in_array_existing() {
                            var x=[R[3],R[3],\"another nice string\",R[4],R[4],R[3],R[4],R[4],R[4]];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|c| aggregate_strings_into_array(c, "R"))
         .to_string();
@@ -779,6 +775,7 @@ fn string_duplicates() {
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(aggregate_strings)
         .apply(crate::js::clean_tokens)
         .to_string();
@@ -794,6 +791,7 @@ fn already_existing_var() {
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(aggregate_strings)
         .apply(crate::js::clean_tokens)
         .to_string();
@@ -809,6 +807,7 @@ fn string_duplicates_variables_already_exist() {
                            \"another nice string\",r_ca,r_ca,r_ba,r_ca,r_ca,r_ca];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(aggregate_strings)
         .apply(crate::js::clean_tokens)
         .to_string();
@@ -824,6 +823,7 @@ fn string_duplicates_with_separator() {
     let expected_result = "var r_aa=\"a nice string\",r_ba=\"cake!\";\nvar x=[r_aa,r_aa,\
                            \"another nice string\",r_ba,r_ba,r_aa,r_ba,r_ba,r_ba];";
     let result = simple_minify(source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(|f| aggregate_strings_with_separation(f, Token::Char(ReservedChar::Backline)))
         .to_string();
@@ -842,6 +842,7 @@ var y="salut";
 var z="ok!""#;
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(|f| {
             crate::js::clean_tokens_except(f, |c| c.get_char() != Some(ReservedChar::Backline))
         })
@@ -857,6 +858,7 @@ fn clean_except2() {
     let expected = "let x = [ 1, 2, 3];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(|f| {
             crate::js::clean_tokens_except(f, |c| {
                 c.get_char() != Some(ReservedChar::Space)
@@ -875,6 +877,7 @@ fn clean_except3() {
     let expected = "let x=[1,2,\t3];";
 
     let result = simple_minify(source)
+        .unwrap()
         .apply(|f| {
             crate::js::clean_tokens_except(f, |c| {
                 c.get_char() != Some(ReservedChar::Tab)
@@ -903,6 +906,7 @@ fn name_generator() {
             .join(",")
     );
     let result = simple_minify(&source)
+        .unwrap()
         .apply(crate::js::clean_tokens)
         .apply(aggregate_strings)
         .to_string();
@@ -914,7 +918,7 @@ fn name_generator() {
 fn simple_quote() {
     let source = r#"var x = "\\";"#;
     let expected_result = r#"var x="\\";"#;
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }
 
 #[test]
@@ -949,7 +953,7 @@ far_away(another_var, 12);
 
     let expected_result = "var foo=\"something\";var another_var=2348323;function far_away(x,y){\
 var x2=x+4;return x*x2+y;}far_away(another_var,12);far_away(another_var,12);";
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }
 
 #[test]
@@ -982,7 +986,7 @@ console.log('done!');
  *
  * right?
  */function forEach(data,func){for(var i=0;i<data.length;++i){func(data[i]);}}forEach([0,1,2,3,4,5,6,7,8,9],function(x){console.log(x);});console.log('done!');"#;
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }
 
 #[test]
@@ -999,7 +1003,7 @@ search_input.onchange = function(e) {
 "#;
     let expected_result = "search_input.onchange=function(e){clearTimeout(searchTimeout);\
                            setTimeout(search,0);};";
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }
 
 #[test]
@@ -1012,7 +1016,7 @@ for (var entry in results) {
 }"#;
     let expected_result = "for(var entry in results){if(results.hasOwnProperty(entry)){\
                            ar.push(results[entry]);}}";
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }
 
 #[test]
@@ -1022,14 +1026,14 @@ val = val.replace(/\_/g, "");
 
 var valGenerics = extractGenerics(val);"#;
     let expected_result = "val=val.replace(/\\_/g,\"\");var valGenerics=extractGenerics(val);";
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }
 
 #[test]
 fn keep_space() {
     fn inner_double_checks(source: &str, expected: &str) {
-        assert_eq!(minify(source).to_string(), expected);
-        let s = minify(source);
+        assert_eq!(minify(source).unwrap().to_string(), expected);
+        let s = minify(source).unwrap();
         let mut out: Vec<u8> = Vec::new();
         s.write(&mut out).unwrap();
         assert_eq!(String::from_utf8(out).unwrap(), expected);
@@ -1077,7 +1081,7 @@ fn test_remove_extra_whitespace_before_typeof() {
     let source = "var x = typeof 'foo';var y = typeof x;case typeof 'foo': 'bla'";
 
     let expected_result = "var x=typeof'foo';var y=typeof x;case typeof'foo':'bla'";
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }
 
 #[test]
@@ -1087,7 +1091,7 @@ if (x in ev && typeof ev) { return true; }
 if (true in ev) { return true; }"#;
 
     let expected_result = r#"if("key"in ev&&typeof ev){return true;}if(x in ev&&typeof ev){return true;}if(true in ev){return true;}"#;
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }
 
 #[test]
@@ -1095,21 +1099,21 @@ fn test_remove_extra_whitespace_before_operator() {
     let source = "( x ) / 2; x / y;x /= y";
 
     let expected_result = "(x)/2;x/y;x/=y";
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }
 
 #[test]
 fn check_regex_syntax() {
     let source = "console.log(/MSIE|Trident|Edge/.test(window.navigator.userAgent));";
     let expected = "console.log(/MSIE|Trident|Edge/.test(window.navigator.userAgent));";
-    assert_eq!(minify(source).to_string(), expected);
+    assert_eq!(minify(source).unwrap().to_string(), expected);
 }
 
 #[test]
 fn minify_minified() {
     let source = "function (i, n, a) { i[n].type.replace(/ *;(.|\\s)*/,\"\")===t&&a.push(i[n].MathJax.elementJax);return a}";
     let expected = "function(i,n,a){i[n].type.replace(/ *;(.|\\s)*/,\"\")===t&&a.push(i[n].MathJax.elementJax);return a}";
-    assert_eq!(minify(source).to_string(), expected);
+    assert_eq!(minify(source).unwrap().to_string(), expected);
 }
 
 #[test]
@@ -1122,7 +1126,7 @@ fn check_string() {
     "###;
     let expected = "const a=123;const b=\"123\";const c=`the number is ${a}  <-- note the spaces \
     here`;const d=`      ${a}         ${b}      `;";
-    assert_eq!(minify(source).to_string(), expected);
+    assert_eq!(minify(source).unwrap().to_string(), expected);
 }
 
 // `for` and `while` loops can be followed with a `;` instead of a block.
@@ -1130,11 +1134,11 @@ fn check_string() {
 fn test_loops() {
     let source = "for (; b() ;);";
     let expected = "for(;b(););";
-    assert_eq!(minify(source).to_string(), expected);
+    assert_eq!(minify(source).unwrap().to_string(), expected);
 
     let source = "while (b());";
     let expected = "while(b());";
-    assert_eq!(minify(source).to_string(), expected);
+    assert_eq!(minify(source).unwrap().to_string(), expected);
 
     let source = r#"
 function a() {
@@ -1142,21 +1146,21 @@ function a() {
     while (b());
 }"#;
     let expected = "function a(){for(;b(););while(b());}";
-    assert_eq!(minify(source).to_string(), expected);
+    assert_eq!(minify(source).unwrap().to_string(), expected);
 
     let source = r#"
 function a() {
     for (; b() ;);
 }"#;
     let expected = "function a(){for(;b(););}";
-    assert_eq!(minify(source).to_string(), expected);
+    assert_eq!(minify(source).unwrap().to_string(), expected);
 
     let source = r#"
 function a() {
     while (b());
 }"#;
     let expected = "function a(){while(b());}";
-    assert_eq!(minify(source).to_string(), expected);
+    assert_eq!(minify(source).unwrap().to_string(), expected);
 }
 
 // TODO: requires AST to fix this issue!
@@ -1168,7 +1172,7 @@ console.log(2)
 var x = 12;
 "#;
     let expected_result = r#"console.log(1);console.log(2);var x=12;"#;
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }*/
 
 // TODO: requires AST to fix this issue!
@@ -1181,5 +1185,5 @@ function foo() {
 }
 "#;
     let expected_result = r#"function foo(){return 12;}"#;
-    assert_eq!(minify(source).to_string(), expected_result);
+    assert_eq!(minify(source).unwrap().to_string(), expected_result);
 }*/
