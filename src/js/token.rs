@@ -207,10 +207,10 @@ impl fmt::Display for Keyword {
     }
 }
 
-impl TryFrom<&str> for Keyword {
-    type Error = &'static str;
+impl FromStr for Keyword {
+    type Err = &'static str;
 
-    fn try_from(value: &str) -> Result<Keyword, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
             "break" => Ok(Keyword::Break),
             "case" => Ok(Keyword::Case),
@@ -764,7 +764,7 @@ fn first_useful<'a>(v: &'a [Token<'a>]) -> Option<&'a Token<'a>> {
 
 fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: usize) {
     if start < pos {
-        if let Ok(w) = Keyword::try_from(&source[start..pos]) {
+        if let Ok(w) = Keyword::from_str(&source[start..pos]) {
             v.push(Token::Keyword(w));
         } else if let Ok(n) = usize::from_str(&source[start..pos]) {
             v.push(Token::Number(n))
@@ -1032,6 +1032,7 @@ fn operators_need_space(token: &Token<'_>, prev_token: &Token<'_>) -> bool {
     let mut tokens = [token, prev_token];
     tokens.sort_unstable();
 
+    #[allow(clippy::match_like_matches_macro)] // More readable as is.
     match tokens {
         [Operation::Addition, Operation::Increment | Operation::Addition] => true,
         [Operation::Subtract, Operation::Decrement | Operation::Subtract] => true,
