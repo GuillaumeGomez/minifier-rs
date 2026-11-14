@@ -207,10 +207,10 @@ impl fmt::Display for Keyword {
     }
 }
 
-impl TryFrom<&str> for Keyword {
-    type Error = &'static str;
+impl FromStr for Keyword {
+    type Err = &'static str;
 
-    fn try_from(value: &str) -> Result<Keyword, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
             "break" => Ok(Keyword::Break),
             "case" => Ok(Keyword::Case),
@@ -308,6 +308,8 @@ pub enum Operation {
     Modulo,
     ModuloEqual,
     Equal,
+    Increment,
+    Decrement,
 }
 
 impl Operation {
@@ -326,23 +328,21 @@ impl Operation {
 
 impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                Operation::Addition => "+",
-                Operation::AdditionEqual => "+=",
-                Operation::Subtract => "-",
-                Operation::SubtractEqual => "-=",
-                Operation::Multiply => "*",
-                Operation::MultiplyEqual => "*=",
-                Operation::Divide => "/",
-                Operation::DivideEqual => "/=",
-                Operation::Modulo => "%",
-                Operation::ModuloEqual => "%=",
-                Operation::Equal => "=",
-            }
-        )
+        f.write_str(match *self {
+            Operation::Addition => "+",
+            Operation::AdditionEqual => "+=",
+            Operation::Subtract => "-",
+            Operation::SubtractEqual => "-=",
+            Operation::Multiply => "*",
+            Operation::MultiplyEqual => "*=",
+            Operation::Divide => "/",
+            Operation::DivideEqual => "/=",
+            Operation::Modulo => "%",
+            Operation::ModuloEqual => "%=",
+            Operation::Equal => "=",
+            Operation::Increment => "++",
+            Operation::Decrement => "--",
+        })
     }
 }
 
@@ -764,7 +764,7 @@ fn first_useful<'a>(v: &'a [Token<'a>]) -> Option<&'a Token<'a>> {
 
 fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: usize) {
     if start < pos {
-        if let Ok(w) = Keyword::try_from(&source[start..pos]) {
+        if let Ok(w) = Keyword::from_str(&source[start..pos]) {
             v.push(Token::Keyword(w));
         } else if let Ok(n) = usize::from_str(&source[start..pos]) {
             v.push(Token::Number(n))
@@ -776,8 +776,16 @@ fn fill_other<'a>(source: &'a str, v: &mut Vec<Token<'a>>, start: usize, pos: us
     }
 }
 
-fn handle_equal_sign(v: &mut Vec<Token<'_>>, c: ReservedChar) -> bool {
-    if c != ReservedChar::EqualSign {
+fn merge_operators(v: &mut Vec<Token<'_>>, c: ReservedChar) -> bool {
+    if c == ReservedChar::Plus && v.last() == Some(&Token::Operation(Operation::Addition)) {
+        v.pop();
+        v.push(Token::Operation(Operation::Increment));
+        return true;
+    } else if c == ReservedChar::Minus && v.last() == Some(&Token::Operation(Operation::Subtract)) {
+        v.pop();
+        v.push(Token::Operation(Operation::Decrement));
+        return true;
+    } else if c != ReservedChar::EqualSign {
         return false;
     }
     match v.last().unwrap_or(&Token::Other("")) {
@@ -1000,7 +1008,7 @@ pub fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
                     v.pop();
                     v.push(Token::Condition(Condition::And));
                 }
-                _ if handle_equal_sign(&mut v, c) => {}
+                _ if merge_operators(&mut v, c) => {}
                 _ => {
                     if let Ok(o) = Operation::try_from(c) {
                         v.push(Token::Operation(o));
@@ -1017,6 +1025,21 @@ pub fn tokenize(source: &str) -> Result<Tokens<'_>, &'static str> {
     Ok(Tokens(v))
 }
 
+fn operators_need_space(token: &Token<'_>, prev_token: &Token<'_>) -> bool {
+    let (Token::Operation(token), Token::Operation(prev_token)) = (token, prev_token) else {
+        return false;
+    };
+    let mut tokens = [token, prev_token];
+    tokens.sort_unstable();
+
+    #[allow(clippy::match_like_matches_macro)] // More readable as is.
+    match tokens {
+        [Operation::Addition, Operation::Increment | Operation::Addition] => true,
+        [Operation::Subtract, Operation::Decrement | Operation::Subtract] => true,
+        _ => false,
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Tokens<'a>(pub Vec<Token<'a>>);
 
@@ -1024,14 +1047,17 @@ macro_rules! tokens_writer {
     ($self:ident, $w:ident) => {
         let tokens = &$self.0;
         for i in 0..tokens.len() {
-            if i > 0
-                && tokens[i].requires_before()
-                && !tokens[i - 1].is_keyword()
-                && !tokens[i - 1].is_other()
-                && !tokens[i - 1].is_reserved_char()
-                && !tokens[i - 1].is_string()
-            {
-                write!($w, " ")?;
+            if i > 0 {
+                if tokens[i].requires_before()
+                    && !tokens[i - 1].is_keyword()
+                    && !tokens[i - 1].is_other()
+                    && !tokens[i - 1].is_reserved_char()
+                    && !tokens[i - 1].is_string()
+                {
+                    write!($w, " ")?;
+                } else if operators_need_space(&tokens[i], &tokens[i - 1]) {
+                    write!($w, " ")?;
+                }
             }
             write!($w, "{}", tokens[i])?;
             if let Some(c) = match tokens[i] {
@@ -1450,4 +1476,14 @@ fn test_unclosed_comment_at_eof() {
     );
     assert_eq!(&tokenize("/*x").unwrap().0, &[Token::Comment("x")]);
     assert_eq!(&tokenize("/*!").unwrap().0, &[Token::License("")]);
+}
+
+#[test]
+fn test_minus_plus_operators() {
+    assert_eq!(
+        crate::js::minify("a + +b; c - -d; e + ++f;g - --h;")
+            .unwrap()
+            .to_string(),
+        "a+ +b;c- -d;e+ ++f;g- --h;",
+    );
 }
